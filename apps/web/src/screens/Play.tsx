@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { GameEvent, PublicGameState, Tile } from '@six-de-chaque/engine';
 import { Board, TileImage, tileLabel } from '../components';
-import { currentPlayer, handLeft, passLegal } from '../game/controller';
+import { currentPlayer, deadChoice, handLeft, passLegal } from '../game/controller';
 import type { UiCommand, UiState } from '../game/controller';
 import { keyToCommand } from '../game/keyboard';
 import { describeEvent } from '../game/describe';
@@ -16,6 +16,7 @@ export function Play({ ui, view, viewerHand, highContrast, announce, zoom, dispa
     const tiles = view.tilesById;
     const canPass = myTurn && passLegal(ui.session);
     const canExchange = myTurn && view.phase !== 'opening' && view.bagCount > 0;
+    const dead = myTurn && deadChoice(ui.session);
     useEffect(() => {
         const onKey = (e: KeyboardEvent): void => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -69,6 +70,9 @@ export function Play({ ui, view, viewerHand, highContrast, announce, zoom, dispa
                 <p className="preview" data-testid="preview">
                     {ui.previewError ? <span className="error">{ui.previewError}</span> : ui.preview ? `Coup prévu : ${ui.preview.total} point${ui.preview.total > 1 ? 's' : ''}` : ui.mode === 'exchange' ? `Échange : ${ui.exchangeSel.length} tuile(s) choisie(s)` : ' '}
                 </p>
+                {dead && ui.mode === 'place' && <p className="dead" role="status" data-testid="dead-position">
+                    Plus aucune tuile du jeu ne peut être posée. Passe, ou échange les tuiles de ton choix (une, plusieurs ou toutes).
+                </p>}
                 <div className="controls">
                     {ui.mode === 'place' ? <>
                         <button type="button" className="primary" disabled={!myTurn || !ui.preview} onClick={() => { dispatch({ t: 'validate' }); }}>Valider</button>

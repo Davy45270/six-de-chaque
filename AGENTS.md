@@ -18,7 +18,8 @@ la conception détaillée et les plans de travail sont tenus hors de ce dépôt.
   son argument ; tout aléa passe par l'état RNG de la partie. Une action rejetée laisse tout identique.
 - **Règles** : 108 tuiles = 6 couleurs × 6 formes × 3 copies ; main de 6 ; ligne de 1 à 6 ; +6 pour une ligne
   complétée à six ; +6 au joueur qui vide sa main réserve vide ; échange à 0 point ; coordonnées bornées à
-  ±100 000. Passer : sans pose possible, réserve vide ou position morte (aucune tuile hors plateau posable).
+  ±100 000. Passer : sans pose possible, réserve vide ou position morte (aucune tuile hors plateau posable) ;
+  en position morte, l'échange reste permis (choix du joueur), l'ordinateur passe.
 - **Dépendances d'exécution** : `ajv` (contrats), `pixi.js` (rendu), `react` et `react-dom` (application).
   Rien d'autre sans accord.
 - **Licences** : code MIT ; art original CC BY 4.0 ; aucune dépendance GPL, AGPL, LGPL, SSPL ou CC BY-SA

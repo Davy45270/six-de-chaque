@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, tileId } from '@six-de-chaque/engine';
 import type { Session } from '@six-de-chaque/engine';
-import { initialUi, passLegal, reduce, withSession } from '../src/game/controller';
+import { deadChoice, initialUi, passLegal, reduce, withSession } from '../src/game/controller';
 import type { UiState } from '../src/game/controller';
 import { stateFrom } from '../../../packages/engine/test/fixtures';
 
@@ -63,6 +63,17 @@ describe('controller', () => {
         expect(reduce(s0, { t: 'pass' }).submit).toBeUndefined();
         const blocked = ui({ state: stateFrom({ board: [[0, 0, 0, 0, 0]], hands: [[[0, 0, 1]], [[0, 0, 2]]], bagCount: 0, types: ['human', 'ai'] }), events: [] });
         expect(reduce(blocked, { t: 'pass' }).submit).toMatchObject({ type: 'PASS', actorId: 'p1' });
+        expect(deadChoice(blocked.session)).toBe(false);
+    });
+    it('dead position with tiles in the bag: pass or exchange part of the hand', () => {
+        const base = stateFrom({ board: [[0, 0, 0, 0, 0]], hands: [[[0, 0, 1], [3, 3, 0]], [[0, 0, 2]]], bagCount: 0, types: ['human', 'ai'] });
+        const dead = ui({ state: { ...base, bag: [tileId(1, 1, 0), tileId(2, 2, 0)] }, events: [] });
+        expect(deadChoice(dead.session)).toBe(true);
+        expect(deadChoice(opening().session)).toBe(false);
+        expect(reduce(dead, { t: 'pass' }).submit).toMatchObject({ type: 'PASS' });
+        const [a] = hand(dead);
+        const s = run(dead, { t: 'toggleExchange' }, { t: 'toggleExchangeTile', tileId: a ?? '' });
+        expect(reduce(s, { t: 'confirmExchange' }).submit).toMatchObject({ type: 'EXCHANGE', tileIds: [a] });
     });
     it('the computer turn and the handover screen block every play command', () => {
         const two = { players: [{ id: 'a', name: 'A', type: 'human' as const }, { id: 'b', name: 'B', type: 'human' as const }] };

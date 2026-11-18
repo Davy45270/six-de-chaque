@@ -83,6 +83,10 @@ describe('applyAction', () => {
         expect(isDeadPosition(dead)).toBe(true);
         expect(isDeadPosition(live)).toBe(false);
         expect(code(applyAction(live, act(live, { type: 'PASS' })))).toBe('PASS_NOT_ALLOWED');
+        // Position morte : le joueur choisit — passer, ou échanger tout ou partie de sa main (dans la limite de la réserve).
+        const swap = applyAction(dead, act(dead, { type: 'EXCHANGE', tileIds: [dead.players[0]?.hand[0] ?? ''] }));
+        if (!swap.ok) throw new Error(swap.error.code);
+        expect(swap.state.consecutivePasses).toBe(0);
         const t1 = applyAction(dead, act(dead, { type: 'PASS' }));
         if (!t1.ok) throw new Error(t1.error.code);
         const t2 = applyAction(t1.state, act(t1.state, { type: 'PASS' }));

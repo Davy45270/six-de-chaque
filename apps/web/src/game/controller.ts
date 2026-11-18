@@ -21,6 +21,10 @@ export function passLegal(session: Session): boolean {
     const p = s.players[s.currentPlayerIndex];
     return Boolean(p) && validateAction(s, { type: 'PASS', actorId: p?.id ?? '', expectedTurn: s.turnNumber, actionId: 'sonde' }).ok;
 }
+/** Position morte, réserve non vide : le joueur choisit entre passer et échanger tout ou partie de sa main. */
+export function deadChoice(session: Session): boolean {
+    return session.state.bag.length > 0 && session.state.phase !== 'opening' && passLegal(session);
+}
 const actionId = (s: UiState, kind: string): string => `${s.gameId}-${s.session.state.turnNumber}-${kind}`;
 
 /** État d'interface d'une nouvelle position : fantôme vidé, écran de passage si plusieurs humains. */

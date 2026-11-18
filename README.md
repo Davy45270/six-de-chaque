@@ -24,7 +24,11 @@ npm ci && npm run lint && npm run typecheck && npm test && npm run build && npm 
 - Premier joueur : la main au plus grand groupe compatible ; égalité départagée par la graine de la partie.
 - Le premier coup est une pose. Passer n'est permis que sans pose possible et, s'il reste des tuiles en
   réserve, seulement en **position morte** (plus aucune tuile hors du plateau n'y trouve de place) : sans cela,
-  deux joueurs bloqués échangeraient sans fin. Un tour complet de passes termine la partie, sans bonus.
+  deux joueurs bloqués échangeraient sans fin. En position morte, le joueur **choisit** : passer, ou échanger
+  tout ou partie de sa main contre des tuiles tirées au hasard dans la réserve. Un échange remet le compte des
+  passes à zéro ; un tour complet de passes termine la partie, sans bonus. L'ordinateur, lui, passe en position
+  morte : aucun échange ne peut alors lui rendre une tuile posable, puisque la réserve n'en contient aucune.
+  Mille parties entre ordinateurs (débutant et intermédiaire) se terminent toutes sous 200 coups en CI.
 - Égalité au plus haut score : victoire partagée.
 
 ## Mesure

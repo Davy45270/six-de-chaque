@@ -28,6 +28,7 @@ steps:
     image: *node
     environment:
       T17_RUNS: "1000"
+      AI_RUNS: "1000"
     commands:
       - npm test
   - name: build
