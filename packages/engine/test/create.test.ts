@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/create';
 import { checkInvariants } from '../src/invariants';
-import { isValidLine, largestCompatibleGroup } from '../src/lines';
+import { boardLookup, isValidLine, largestCompatibleGroup, parseKey } from '../src/lines';
 import { tileId, tileOf } from '../src/tiles';
 import { bot, human } from './fixtures';
 
@@ -71,6 +71,13 @@ describe('lines', () => {
         expect(largestCompatibleGroup([t(0, 0), t(0, 0, 1), t(0, 1)])).toBe(2);
         expect(largestCompatibleGroup([t(0, 0), t(1, 0), t(2, 0), t(3, 1)])).toBe(3);
         expect(largestCompatibleGroup([])).toBe(0);
+    });
+    it('parseKey and boardLookup', () => {
+        expect(parseKey('-3:12')).toEqual({ x: -3, y: 12 });
+        expect(parseKey('x')).toEqual({ x: Number.NaN, y: Number.NaN });
+        expect(boardLookup({ '1:2': 't-001' })(1, 2)).toBe('t-001');
+        expect(boardLookup({ '1:2': 't-001' }, new Map([['1:2', 't-009']]))(1, 2)).toBe('t-009');
+        expect(boardLookup({})(0, 0)).toBeUndefined();
     });
     it('isValidLine', () => {
         expect(isValidLine([t(0, 0), t(0, 1), t(0, 2)])).toBe(true);

@@ -9,7 +9,7 @@ export default defineConfig({
         // Seuil de la spec : 95 % des branches sur les règles et le score du moteur.
         coverage: {
             provider: 'v8',
-            include: ['packages/engine/src/validate.ts', 'packages/engine/src/score.ts', 'packages/engine/src/apply.ts', 'packages/engine/src/lines.ts'],
+            include: ['packages/engine/src/validate.ts', 'packages/engine/src/placement.ts', 'packages/engine/src/score.ts', 'packages/engine/src/apply.ts', 'packages/engine/src/lines.ts'],
             thresholds: { branches: 95 }
         }
     }

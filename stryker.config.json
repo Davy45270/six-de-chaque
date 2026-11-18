@@ -3,7 +3,7 @@
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.config.ts", "dir": "packages/engine" },
-  "mutate": ["packages/engine/src/validate.ts", "packages/engine/src/score.ts", "packages/engine/src/apply.ts", "packages/engine/src/lines.ts"],
+  "mutate": ["packages/engine/src/validate.ts", "packages/engine/src/placement.ts", "packages/engine/src/score.ts", "packages/engine/src/apply.ts", "packages/engine/src/lines.ts"],
   "reporters": ["clear-text", "progress"],
   "thresholds": { "high": 90, "low": 80, "break": 80 },
   "concurrency": 2,

@@ -11,6 +11,7 @@ const at = (cells: Array<[number, number]>): Placement[] => cells.map(([x, y], i
 
 describe('calculateScore', () => {
     it('T02 isolated first tile scores 1', () => { expect(calculateScore({}, at([[0, 0]]))).toEqual({ segments: [], base: 1, bonuses: 0, total: 1 }); });
+    it('an empty move scores nothing', () => { expect(calculateScore({}, []).total).toBe(0); });
     it('T03 three tiles in a line score 3', () => { expect(calculateScore({}, at([[0, 0], [1, 0], [2, 0]])).total).toBe(3); });
     it('T04 completing a line of six scores 12', () => {
         const s = calculateScore(board([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]]), at([[5, 0]]));

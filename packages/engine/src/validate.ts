@@ -3,7 +3,7 @@ import { findAnyLegalPlacement, isDeadPosition } from './moves';
 import { validatePlacements } from './placement';
 import { OK, reject } from './reject';
 import type { Validation } from './reject';
-import type { ExchangeAction, GameAction, GameState, TileId } from './types';
+import type { ExchangeAction, GameAction, GameState, PlayerState, TileId } from './types';
 
 export type { RejectCode, Rejection, Validation } from './reject';
 export { validatePlacements } from './placement';
@@ -29,8 +29,8 @@ function validateExchange(state: GameState, hand: readonly TileId[], action: Exc
 export function validateAction(state: GameState, action: GameAction): Validation {
     const turn = validateTurn(state, action);
     if (!turn.ok) return turn;
-    const player = state.players[state.currentPlayerIndex];
-    const hand = player?.hand ?? [];
+    // validateTurn garantit que le joueur courant existe et agit.
+    const hand = (state.players[state.currentPlayerIndex] as PlayerState).hand;
     switch (action.type) {
         case 'PLACE': return validatePlacements(state, hand, action.placements);
         case 'EXCHANGE': return validateExchange(state, hand, action);
