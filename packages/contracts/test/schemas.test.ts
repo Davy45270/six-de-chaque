@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateGameAction, validateGameSnapshot } from '../src/index';
+import { createGame } from '@six-de-chaque/engine';
 
 const id = (i: number): string => `t-${String(i).padStart(3, '0')}`;
 function minimal(): Record<string, unknown> {
@@ -62,5 +63,14 @@ describe('game action schema', () => {
     });
     it('rejects action with extra property', () => {
         expect(validateGameAction({ type: 'PASS', actorId: 'p1', expectedTurn: 2, actionId: 'a', bonus: 6 }).ok).toBe(false);
+    });
+});
+
+describe('engine snapshots', () => {
+    it('snapshot from createGame validates', () => {
+        for (const n of [2, 4]) {
+            const players = [{ id: 'h', name: 'Humain', type: 'human' as const }, ...Array.from({ length: n - 1 }, (_, i) => ({ id: `o${i}`, name: 'Ordinateur', type: 'ai' as const, aiLevel: 'intermediate' as const }))];
+            expect(validateGameSnapshot(JSON.parse(JSON.stringify(createGame({ players }, `schema-${n}`))))).toMatchObject({ ok: true });
+        }
     });
 });
