@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Six de chaque GameAction v1",
+  "oneOf": [
+    {"type":"object","additionalProperties":false,"required":["type","actorId","expectedTurn","actionId","placements"],"properties":{"type":{"const":"PLACE"},"actorId":{"type":"string"},"expectedTurn":{"type":"integer","minimum":0},"actionId":{"type":"string"},"placements":{"type":"array","minItems":1,"maxItems":6,"items":{"type":"object","additionalProperties":false,"required":["tileId","x","y"],"properties":{"tileId":{"type":"string"},"x":{"type":"integer"},"y":{"type":"integer"}}}}}},
+    {"type":"object","additionalProperties":false,"required":["type","actorId","expectedTurn","actionId","tileIds"],"properties":{"type":{"const":"EXCHANGE"},"actorId":{"type":"string"},"expectedTurn":{"type":"integer","minimum":0},"actionId":{"type":"string"},"tileIds":{"type":"array","minItems":1,"maxItems":6,"items":{"type":"string"}}}},
+    {"type":"object","additionalProperties":false,"required":["type","actorId","expectedTurn","actionId"],"properties":{"type":{"const":"PASS"},"actorId":{"type":"string"},"expectedTurn":{"type":"integer","minimum":0},"actionId":{"type":"string"}}}
+  ]
+}

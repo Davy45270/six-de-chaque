@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Six de chaque GameState v1 (wire snapshot)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "seed", "rngState", "phase", "turnNumber", "currentPlayerIndex", "tilesById", "board", "players", "bag", "consecutivePasses", "config", "endReason"],
+  "properties": {
+    "version": { "const": 1 },
+    "seed": { "type": "string", "minLength": 1 },
+    "rngState": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 4294967295 }, "minItems": 4, "maxItems": 4 },
+    "phase": { "enum": ["opening", "playing", "finished"] },
+    "turnNumber": { "type": "integer", "minimum": 0 },
+    "currentPlayerIndex": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "tilesById": { "type": "object", "additionalProperties": { "$ref": "#/$defs/tile" } },
+    "board": {
+      "type": "object",
+      "propertyNames": { "pattern": "^-?(0|[1-9][0-9]*):-?(0|[1-9][0-9]*)$" },
+      "additionalProperties": { "type": "string" }
+    },
+    "players": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "type", "score", "hand"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "enum": ["human", "ai"] },
+          "aiLevel": { "enum": ["beginner", "intermediate"] },
+          "score": { "type": "integer", "minimum": 0 },
+          "hand": { "type": "array", "maxItems": 6, "items": { "type": "string" } }
+        },
+        "if": { "properties": { "type": { "const": "ai" } } },
+        "then": { "required": ["aiLevel"] }
+      }
+    },
+    "bag": { "type": "array", "items": { "type": "string" } },
+    "consecutivePasses": { "type": "integer", "minimum": 0 },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockedEndPolicy", "coordinateLimit"],
+      "properties": {
+        "blockedEndPolicy": { "const": "fullPassRound" },
+        "coordinateLimit": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "endReason": { "enum": [null, "out", "blocked"] }
+  },
+  "$defs": {
+    "tile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "color", "shape"],
+      "properties": {
+        "id": { "type": "string" },
+        "color": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "shape": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    }
+  }
+}
