@@ -1,5 +1,5 @@
 // Validation d'une action, sans mutation. Ordre : cycle d'un tour (phase, acteur, tour), puis règles de l'action.
-import { findAnyLegalPlacement } from './moves';
+import { findAnyLegalPlacement, isDeadPosition } from './moves';
 import { validatePlacements } from './placement';
 import { OK, reject } from './reject';
 import type { Validation } from './reject';
@@ -35,8 +35,9 @@ export function validateAction(state: GameState, action: GameAction): Validation
         case 'PLACE': return validatePlacements(state, hand, action.placements);
         case 'EXCHANGE': return validateExchange(state, hand, action);
         case 'PASS':
-            if (state.bag.length > 0) return reject('PASS_NOT_ALLOWED', 'Tu peux encore échanger des tuiles.');
             if (findAnyLegalPlacement(state, action.actorId)) return reject('PASS_NOT_ALLOWED', 'Tu peux encore poser une tuile.');
+            // Réserve non vide : l'échange reste obligatoire, sauf en position morte (plus rien n'est posable).
+            if (state.bag.length > 0 && !isDeadPosition(state)) return reject('PASS_NOT_ALLOWED', 'Tu peux encore échanger des tuiles.');
             return OK;
     }
 }

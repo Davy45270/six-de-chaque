@@ -2,6 +2,7 @@
 import { createGame } from '../src/create';
 import { getLegalMoves } from '../src/moves';
 import { submit } from '../src/session';
+import { validateAction } from '../src/validate';
 import type { Session } from '../src/session';
 import type { GameAction, GameConfig } from '../src/types';
 import { bot, human } from './fixtures';
@@ -17,8 +18,8 @@ export function nextAction(session: Session, pick: (n: number) => number = () =>
     const moves = getLegalMoves(s, player.id, limit);
     const move = moves[pick(moves.length)] ?? moves[0];
     if (move) return { ...base, type: 'PLACE', placements: move.placements };
-    if (s.bag.length > 0) return { ...base, type: 'EXCHANGE', tileIds: player.hand.slice(0, Math.min(s.bag.length, 1 + (s.turnNumber % player.hand.length))) };
-    return { ...base, type: 'PASS' };
+    if (validateAction(s, { ...base, type: 'PASS' }).ok) return { ...base, type: 'PASS' };
+    return { ...base, type: 'EXCHANGE', tileIds: player.hand.slice(0, Math.min(s.bag.length, 1 + (s.turnNumber % player.hand.length))) };
 }
 
 export function playGame(config: GameConfig, seed: string, opts: { pick?: (n: number) => number; limit?: number; maxTurns?: number; each?: (s: Session) => void } = {}): Session {

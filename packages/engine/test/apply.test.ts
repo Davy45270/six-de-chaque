@@ -4,6 +4,7 @@ import { applyAction, winners } from '../src/apply';
 import { createGame } from '../src/create';
 import { checkInvariants } from '../src/invariants';
 import { submit } from '../src/session';
+import { isDeadPosition } from '../src/moves';
 import { tileId } from '../src/tiles';
 import type { GameAction, GameState } from '../src/types';
 import { bot, human, stateFrom } from './fixtures';
@@ -73,6 +74,21 @@ describe('applyAction', () => {
         const canPlace = stateFrom({ board: [[0, 0, 0, 0, 0]], hands: [[[0, 1]], [[0, 0, 2]]], bagCount: 0 });
         expect(code(applyAction(canPlace, act(canPlace, { type: 'PASS' })))).toBe('PASS_NOT_ALLOWED');
         expect(code(applyAction(createGame(configOf(2), 'p'), act(createGame(configOf(2), 'p'), { type: 'PASS' })))).toBe('PASS_NOT_ALLOWED');
+    });
+    it('PASS is legal with tiles left in the bag only in a dead position', () => {
+        // Plateau : c0s0 seul ; mains : les deux autres copies de c0s0. Une réserve c1s1 (rien en commun) est morte.
+        const base = stateFrom({ board: [[0, 0, 0, 0, 0]], hands: [[[0, 0, 1]], [[0, 0, 2]]], bagCount: 0 });
+        const dead = { ...base, bag: [tileId(1, 1, 0)] };
+        const live = { ...base, bag: [tileId(0, 1, 0)] };
+        expect(isDeadPosition(dead)).toBe(true);
+        expect(isDeadPosition(live)).toBe(false);
+        expect(code(applyAction(live, act(live, { type: 'PASS' })))).toBe('PASS_NOT_ALLOWED');
+        const t1 = applyAction(dead, act(dead, { type: 'PASS' }));
+        if (!t1.ok) throw new Error(t1.error.code);
+        const t2 = applyAction(t1.state, act(t1.state, { type: 'PASS' }));
+        if (!t2.ok) throw new Error(t2.error.code);
+        expect(t2.state).toMatchObject({ phase: 'finished', endReason: 'blocked' });
+        expect(t2.state.bag).toEqual([tileId(1, 1, 0)]);
     });
     it('T15 last tile with empty bag gives +6 and ends the game', () => {
         const s = stateFrom({ board: [[0, 0, 0, 0]], hands: [[[0, 1]], [[3, 3]]], bagCount: 0 });

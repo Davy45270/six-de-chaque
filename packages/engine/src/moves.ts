@@ -100,3 +100,20 @@ export function getLegalMoves(state: GameState, playerId: string, limit = Infini
 export function findAnyLegalPlacement(state: GameState, playerId: string): Placement[] | null {
     return getLegalMoves(state, playerId, 1)[0]?.placements ?? null;
 }
+
+/**
+ * Position morte : aucune tuile hors du plateau (mains et réserve) ne peut plus y être posée, même seule.
+ * Un coup de plusieurs tuiles contient toujours une tuile posable seule (lignes héritées, contact), donc ce
+ * contrôle suffit. Dans ce cas l'échange ne peut plus rien débloquer : la passe devient légale.
+ */
+export function isDeadPosition(state: GameState): boolean {
+    const kinds = new Map<number, TileId>();
+    for (const id of [...state.players.flatMap(p => p.hand), ...state.bag]) {
+        const t = state.tilesById[id];
+        if (t && !kinds.has(t.color * 6 + t.shape)) kinds.set(t.color * 6 + t.shape, id);
+    }
+    const probe = state.players[0];
+    if (!probe) return true;
+    const pseudo: GameState = { ...state, players: [{ ...probe, hand: [...kinds.values()] }, ...state.players.slice(1)] };
+    return getLegalMoves(pseudo, probe.id, 1).length === 0;
+}
