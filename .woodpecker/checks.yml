@@ -44,7 +44,7 @@ steps:
     image: *node
     commands:
       - npm sbom --sbom-format cyclonedx > sbom.json
-      - node -e 'const s=require("./sbom.json"); console.log("SBOM CycloneDX " + s.specVersion + " : " + s.components.length + " composants")'
+      - grep -c CycloneDX sbom.json
       - npm audit --audit-level=high
       - npm run check:licenses
   - name: secrets
