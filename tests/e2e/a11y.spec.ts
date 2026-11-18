@@ -59,6 +59,11 @@ test('high contrast setting persists', async ({ page }) => {
     await openApp(page, 'essai');
     await page.getByLabel('Contraste élevé').check();
     await expect(page.locator('html')).toHaveClass(/\bhc\b/);
+    // Le réglage est écrit dans IndexedDB : attendre l'écriture avant de recharger.
+    await expect.poll(() => page.evaluate(() => new Promise(resolve => {
+        const open = indexedDB.open('six-de-chaque');
+        open.onsuccess = () => { const r = open.result.transaction('settings').objectStore('settings').get('highContrast'); r.onsuccess = () => { resolve(r.result); }; };
+    }))).toBe(true);
     await page.reload();
     await expect(page.getByLabel('Contraste élevé')).toBeChecked();
     await expect(page.locator('html')).toHaveClass(/\bhc\b/);

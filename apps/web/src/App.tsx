@@ -21,7 +21,9 @@ const AI_DELAY_MS = 600;
 const newSeed = (): string => new URLSearchParams(location.search).get('seed') ?? crypto.randomUUID();
 
 export function App() {
-    const [db, setDb] = useState<IDBDatabase | null>(null);
+    // Une seule ouverture ; chaque écriture attend la base, même si l'utilisateur agit avant qu'elle soit prête.
+    const dbReady = useMemo(() => openDb(), []);
+    const withDb = useCallback((fn: (d: IDBDatabase) => Promise<unknown>) => { void dbReady.then(fn).catch(() => { setMessage('La sauvegarde n’est pas disponible dans ce navigateur.'); }); }, [dbReady]);
     const [screen, setScreen] = useState<Screen>('home');
     const [ui, setUi] = useState<UiState | null>(null);
     const [highContrast, setHighContrast] = useState(false);
@@ -36,8 +38,7 @@ export function App() {
     hashRef.current = ui ? stateHash(ui.session.state) : '';
 
     useEffect(() => {
-        void openDb().then(async d => {
-            setDb(d);
+        void dbReady.then(async d => {
             setHighContrast((await getSetting<boolean>(d, 'highContrast')) ?? false);
             const last = await getSetting<string>(d, 'lastGameId');
             const games = await listGames(d);
@@ -59,8 +60,8 @@ export function App() {
         setUi(next);
         setAnnounce('');
         setScreen(session.state.phase === 'finished' ? 'end' : 'play');
-        if (db) void setSetting(db, 'lastGameId', gameId);
-    }, [db]);
+        withDb(d => setSetting(d, 'lastGameId', gameId));
+    }, [withDb]);
 
     const apply = useCallback((action: GameAction) => {
         const cur = uiRef.current;
@@ -70,9 +71,9 @@ export function App() {
         const next = withSession({ ...cur, cursor: cur.cursor }, session);
         setUi(next);
         setAnnounce(describeEvent(result.event, cur.config, session.state.tilesById));
-        if (db) void saveTurn(db, cur.gameId, session, cur.config);
+        withDb(d => saveTurn(d, cur.gameId, session, cur.config));
         if (session.state.phase === 'finished') setScreen('end');
-    }, [db]);
+    }, [withDb]);
 
     const dispatch = useCallback((c: UiCommand) => {
         const cur = uiRef.current;
@@ -122,19 +123,19 @@ export function App() {
     const startNew = (config: GameConfig): void => {
         const gameId = `partie-${crypto.randomUUID()}`;
         const session: Session = { state: createGame(config, newSeed()), events: [] };
-        if (db) void saveAll(db, gameId, session, config);
+        withDb(d => saveAll(d, gameId, session, config));
         open(session, config, gameId);
     };
-    const toggleContrast = (on: boolean): void => { setHighContrast(on); if (db) void setSetting(db, 'highContrast', on); };
+    const toggleContrast = (on: boolean): void => { setHighContrast(on); withDb(d => setSetting(d, 'highContrast', on)); };
     const doExport = (): void => {
-        if (!db || !ui) return;
-        void exportGame(db, ui.gameId).then(json => {
+        if (!ui) return;
+        withDb(d => exportGame(d, ui.gameId).then(json => {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
             a.download = `six-de-chaque-${ui.session.state.turnNumber}.json`;
             a.click();
             setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
-        });
+        }));
     };
 
     if (screen === 'setup') return <Setup onStart={startNew} onBack={() => { setScreen('home'); }} />;
@@ -152,14 +153,14 @@ export function App() {
         onNew={() => { setScreen('setup'); }}
         onResume={() => {
             if (ui && ui.session.state.phase !== 'finished') { setUi(withSession(ui, ui.session)); setScreen('play'); return; }
-            if (db && resume) void loadGame(db, resume.id).then(g => { open(g.session, g.config, resume.id); }).catch(() => { setMessage('Impossible de relire cette partie.'); });
+            if (resume) withDb(d => loadGame(d, resume.id).then(g => { open(g.session, g.config, resume.id); }).catch(() => { setMessage('Impossible de relire cette partie.'); }));
         }}
         onImport={text => {
-            if (!db) return;
-            void importGame(db, text).then(async r => {
+            withDb(async d => {
+                const r = await importGame(d, text);
                 if (!r.ok) { setMessage(`Import refusé : ${r.reason}`); return; }
                 setMessage(null);
-                const g = await loadGame(db, r.gameId);
+                const g = await loadGame(d, r.gameId);
                 open(g.session, g.config, r.gameId);
             });
         }}
