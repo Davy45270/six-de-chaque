@@ -5,6 +5,7 @@ import { currentPlayer, deadChoice, handLeft, passLegal } from '../game/controll
 import type { UiCommand, UiState } from '../game/controller';
 import { keyToCommand } from '../game/keyboard';
 import { describeEvent } from '../game/describe';
+import { turnLabel } from '../game/turn-label';
 
 export interface PlayProps {
     ui: UiState; view: PublicGameState; viewerHand: string[] | null; highContrast: boolean; announce: string; zoom: { n: number; factor: number };
@@ -48,7 +49,7 @@ export function Play({ ui, view, viewerHand, highContrast, announce, zoom, dispa
                 <p className="bag" data-testid="bag">Réserve : {view.bagCount}</p>
                 <button type="button" className="menu-button" onClick={onMenu}>Menu</button>
             </header>
-            <p className="turn" data-testid="turn">{ui.aiThinking ? `${me?.name ?? ''} réfléchit…` : myTurn ? `À toi, ${me.name}` : `Au tour de ${me?.name ?? ''}`}</p>
+            <p className="turn" data-testid="turn">{turnLabel({ name: me?.name, myTurn, aiThinking: ui.aiThinking })}</p>
             <Board board={view.board} ghost={ui.ghost} cursor={myTurn ? ui.cursor : null} tiles={tiles} highContrast={highContrast} zoom={zoom}
                 onTap={(x, y) => { dispatch({ t: 'placeAt', x, y }); }} label={`Plateau, ${Object.keys(view.board).length} tuiles posées. Case du curseur ${ui.cursor.x}, ${ui.cursor.y}.`} />
             <section className="panel">
