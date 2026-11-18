@@ -10,7 +10,7 @@ export function canonicalJson(value: unknown): string {
 }
 
 const encoder = new TextEncoder();
-/** FNV-1a 64 bits sur les octets UTF-8, calculé en quatre mots de 16 bits. */
+/** FNV-1a 64 bits sur les octets du texte encodé, calculé en quatre mots de 16 bits. */
 export function fnv1a64(text: string): string {
     let h0 = 0x2325, h1 = 0x8422, h2 = 0x9ce4, h3 = 0xcbf2;
     for (const byte of encoder.encode(text)) {
