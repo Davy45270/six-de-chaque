@@ -1,0 +1,15 @@
+{
+  "name": "@six-de-chaque/web",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@six-de-chaque/ai": "0.1.0",
+    "@six-de-chaque/contracts": "0.1.0",
+    "@six-de-chaque/engine": "0.1.0",
+    "@six-de-chaque/renderer-pixi": "0.1.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

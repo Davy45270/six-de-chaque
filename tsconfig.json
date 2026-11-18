@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "strict": true,
+    "resolveJsonModule": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "apps/web/src",
+    "apps/web/test",
+    "apps/web/*.ts",
+    "packages/*/src",
+    "packages/*/test",
+    "packages/*/bench",
+    "tests",
+    "scripts/**/*.ts",
+    "*.ts"
+  ]
+}

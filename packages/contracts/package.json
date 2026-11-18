@@ -1,0 +1,14 @@
+{
+  "name": "@six-de-chaque/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@six-de-chaque/engine": "0.1.0",
+    "ajv": "8.20.0"
+  }
+}

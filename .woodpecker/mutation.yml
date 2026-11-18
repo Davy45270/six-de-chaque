@@ -1,0 +1,14 @@
+# Tests de mutation (Stryker) sur les règles et le score : trop longs pour chaque push, lancés à la main.
+labels:
+  host: tank01
+
+when:
+  - event: manual
+
+steps:
+  - name: mutation
+    image: harbor.pingfr.duckdns.org/dockerhub/library/node:26
+    pull: true
+    commands:
+      - npm ci
+      - npm run test:mutation

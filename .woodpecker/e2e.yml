@@ -1,0 +1,47 @@
+# Repris de capsule-panic (.woodpecker/e2e.yml) : toutes les specs de tests/e2e, sur tous les projets.
+depends_on: [checks]
+
+when:
+  - event: push
+    branch: main
+  - event: [pull_request, manual]
+
+clone:
+  - name: clone
+    image: woodpeckerci/plugin-git:2.12.1
+    settings:
+      depth: 1
+
+steps:
+  - name: e2e
+    image: &playwright mcr.microsoft.com/playwright:v1.65.0-noble
+    environment:
+      PW_IMAGE: *playwright
+    commands:
+      - |
+        # DejaVu fonts: the image has none (sans-serif = WenQuanYi), the GitHub runners have them.
+        # npm package checked against its registry integrity, no apt.
+        npm pack --silent --pack-destination /tmp dejavu-fonts-ttf@2.37.3 >/dev/null
+        node -e '
+          const f = require("fs").readFileSync("/tmp/dejavu-fonts-ttf-2.37.3.tgz");
+          const got = "sha512-" + require("crypto").createHash("sha512").update(f).digest("base64");
+          const want = "sha512-f1hd7jJbeQa1VWcw+K2KrTXS50zTMaHpVC4XIKJpNcDeYR5ajMtj/iLlQDYNvLOKamUB3ARVVCf79lNwNVztSQ==";
+          if (got !== want) { console.error("dejavu-fonts-ttf : intégrité inattendue " + got); process.exit(1); }
+          console.log("dejavu-fonts-ttf 2.37.3 : intégrité vérifiée");'
+        mkdir -p /usr/local/share/fonts/dejavu
+        tar xzf /tmp/dejavu-fonts-ttf-2.37.3.tgz -C /usr/local/share/fonts/dejavu --strip-components=1 package/LICENSE
+        tar xzf /tmp/dejavu-fonts-ttf-2.37.3.tgz -C /usr/local/share/fonts/dejavu --strip-components=2 --wildcards 'package/ttf/*.ttf'
+        fc-cache -f >/dev/null
+        for f in sans-serif "DejaVu Sans"; do
+          got=$(fc-match -f '%{family[0]}' "$$f")
+          echo "fc-match $$f -> $$got"
+          [ "$$got" = "DejaVu Sans" ] || { echo "police inattendue pour $$f : $$got"; exit 1; }
+        done
+        npm ci
+        # The browsers come with the image: its Playwright version must be the one of package-lock.
+        WANT=$(echo "$$PW_IMAGE" | sed -n 's/.*:v\([0-9.]*\)-.*/\1/p')
+        GOT=$(node -p "require('@playwright/test/package.json').version")
+        echo "Playwright : image $$WANT, dépôt $$GOT"
+        [ -n "$$WANT" ] && [ "$$WANT" = "$$GOT" ] || { echo "versions divergentes : changer l'image de .woodpecker/e2e.yml"; exit 1; }
+        npm run build
+        npm run test:e2e -- --pass-with-no-tests
