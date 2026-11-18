@@ -25,6 +25,8 @@ describe('palette and art', () => {
         expect(all.size).toBe(72);
         expect(tileName(0, 0)).toBe('lune orange (plein)');
         expect(tileName(5, 5)).toBe('cœur vermillon (chevron)');
+        expect(tileName(2, 0)).toBe('lune verte (pointillé)');
+        expect(tileName(4, 3)).toBe('éclair bleu (anneau)');
     });
 });
 

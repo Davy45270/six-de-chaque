@@ -6,6 +6,9 @@ export const PATTERNS = ['plein', 'raye', 'pointille', 'quadrille', 'anneau', 'c
 export const COLOR_NAMES = ['orange', 'ciel', 'vert', 'jaune', 'bleu', 'vermillon'] as const;
 export const PATTERN_NAMES = ['plein', 'rayé', 'pointillé', 'quadrillé', 'anneau', 'chevron'] as const;
 export const SHAPE_NAMES = ['lune', 'goutte', 'feuille', 'éclair', 'spirale', 'cœur'] as const;
+/** Accord de la couleur avec le glyphe : lune, goutte, feuille et spirale sont féminins. */
+const FEMININE = [true, true, true, false, true, false];
+const COLOR_NAMES_FEMININE = ['orange', 'ciel', 'verte', 'jaune', 'bleue', 'vermillon'] as const;
 /** Fond du galet et du plateau. */
 export const TILE_BG = '#F3E9D2';
 export const TILE_BG_HIGH_CONTRAST = '#FFFFFF';
@@ -14,7 +17,7 @@ export const INK = '#3B2F1E';
 
 /** Nom accessible d'une tuile : « lune orange (plein) ». */
 export const tileName = (color: number, shape: number): string =>
-    `${SHAPE_NAMES[shape] ?? '?'} ${COLOR_NAMES[color] ?? '?'} (${PATTERN_NAMES[color] ?? '?'})`;
+    `${SHAPE_NAMES[shape] ?? '?'} ${(FEMININE[shape] ? COLOR_NAMES_FEMININE : COLOR_NAMES)[color] ?? '?'} (${PATTERN_NAMES[color] ?? '?'})`;
 
 /** Rapport de contraste WCAG entre deux couleurs « #RRGGBB ». */
 export function contrastRatio(a: string, b: string): number {
