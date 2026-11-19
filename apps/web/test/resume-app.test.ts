@@ -155,6 +155,7 @@ it('a failed initial save is repaired by the first turn, not treated as another 
         const first = save.mock.calls[0]?.[2];
         expect(first?.events).toHaveLength(1);
         expect(await loadGame(db, id, 'resume')).toMatchObject({ consistent: true, session: first });
+        expect(await getSetting(db, 'lastGameId')).toBe(id);
         expect(host.querySelector('main.home')).toBeNull();
     } finally {
         db.close();
@@ -554,5 +555,45 @@ it.each([
     } finally {
         history.replaceState(null, '', originalUrl);
         window.removeEventListener('error', onError);
+    }
+});
+
+it('a failed new-game save keeps offering the previous saved game', async () => {
+    const db = await openDb();
+    const config = configOf(2);
+    const previous = playGame(config, 'partie-précédente', { maxTurns: 1 });
+    try {
+        await saveAll(db, gameId, previous, config);
+        await setSetting(db, 'lastGameId', gameId);
+        const initialSave = vi.spyOn(storage, 'saveAll').mockRejectedValueOnce(new DOMException('Quota dépassé', 'QuotaExceededError'));
+        const load = vi.spyOn(storage, 'loadGame');
+        const list = vi.spyOn(storage, 'listGames');
+        mount();
+        await act(async () => {
+            await vi.waitFor(() => expect(load).toHaveBeenCalledOnce());
+            await load.mock.results[0]?.value;
+        });
+        expect(host.textContent).toContain('Reprendre la partie');
+        clickButton('Nouvelle partie');
+        clickButton('Commencer');
+        await act(async () => {
+            await vi.waitFor(() => expect(initialSave).toHaveBeenCalledOnce());
+            await expect(initialSave.mock.results[0]?.value).rejects.toMatchObject({ name: 'QuotaExceededError' });
+            await getSetting(db, 'lastGameId');
+        });
+
+        act(() => { root.unmount(); });
+        root = createRoot(host);
+        mount();
+        await act(async () => {
+            await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+            await list.mock.results[1]?.value;
+            await load.mock.results[1]?.value;
+        });
+        expect(host.textContent).toContain('Reprendre la partie');
+        expect(load).toHaveBeenLastCalledWith(expect.anything(), gameId, 'preview');
+        expect(await getSetting(db, 'lastGameId')).toBe(gameId);
+    } finally {
+        db.close();
     }
 });

@@ -44,7 +44,7 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
     const previousChecksum = stateHash(savedState);
     const next = record(gameId, session, config);
     const finished = session.state.phase === 'finished';
-    const tx = db.transaction(finished ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
+    const tx = db.transaction(['games', 'events', 'settings'], 'readwrite');
     const games = tx.objectStore('games');
     const stored = await req(games.get(gameId) as IDBRequest<StoredGame | undefined>);
     if (stored && stored.checksum !== previousChecksum) {
@@ -78,16 +78,20 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
         lastGameId.onsuccess = () => {
             if (lastGameId.result === gameId) settings.delete('lastGameId');
         };
+    } else if (!stored) {
+        tx.objectStore('settings').put(gameId, 'lastGameId');
     }
     await done(tx);
 }
 
 /** Écrit une partie complète (nouvelle partie, import). */
-export async function saveAll(db: IDBDatabase, gameId: string, session: Session, config: GameConfig): Promise<void> {
-    const tx = db.transaction(['games', 'events'], 'readwrite');
+export async function saveAll(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, { resumeOnReload = false } = {}): Promise<void> {
+    const resumable = resumeOnReload && session.state.phase !== 'finished';
+    const tx = db.transaction(resumable ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
     tx.objectStore('games').put(record(gameId, session, config));
     const events = tx.objectStore('events');
     for (const e of session.events) events.put({ ...e, gameId } satisfies StoredEvent);
+    if (resumable) tx.objectStore('settings').put(gameId, 'lastGameId');
     await done(tx);
 }
 

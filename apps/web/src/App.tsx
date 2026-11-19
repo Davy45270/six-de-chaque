@@ -97,8 +97,7 @@ export function App({ example }: { example?: OpenExample }) {
         unsavedSince.current = null;
         setMessage(null);
         setScreen(session.state.phase === 'finished' ? 'end' : 'play');
-        if (session.state.phase !== 'finished') withDb(d => setSetting(d, 'lastGameId', gameId));
-    }, [withDb]);
+    }, []);
 
     const apply = useCallback(async (action: GameAction) => {
         const cur = uiRef.current;
@@ -208,7 +207,7 @@ export function App({ example }: { example?: OpenExample }) {
     const startNew = (config: GameConfig): void => {
         const gameId = `partie-${crypto.randomUUID()}`;
         const session: Session = { state: createGame(config, newSeed()), events: [] };
-        withDb(d => saveAll(d, gameId, session, config));
+        withDb(d => saveAll(d, gameId, session, config, { resumeOnReload: true }));
         open(session, config, gameId);
     };
     // Le choix est écrit d'abord en copie synchrone (survit à un rechargement immédiat), puis dans la base.
@@ -270,6 +269,7 @@ export function App({ example }: { example?: OpenExample }) {
                 const status = savedResumeStatus(id, g);
                 if (g && status.resume) {
                     open(g.session, g.config, id);
+                    await setSetting(d, 'lastGameId', id);
                 } else {
                     setResume(saved => saved?.id === id ? null : saved);
                     setMessage(status.message);
@@ -283,6 +283,7 @@ export function App({ example }: { example?: OpenExample }) {
                 setMessage(null);
                 const g = await loadGame(d, r.gameId);
                 open(g.session, g.config, r.gameId);
+                if (g.session.state.phase !== 'finished') await setSetting(d, 'lastGameId', r.gameId);
             });
         }}
         onToggleContrast={toggleContrast} onToggleColourBlind={toggleColourBlind} onAbout={() => { setScreen('about'); }} />;
