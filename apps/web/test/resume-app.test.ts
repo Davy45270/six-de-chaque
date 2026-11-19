@@ -107,6 +107,10 @@ async function resumeSavedGame(): Promise<void> {
 function playNextTurn(session: Session): void {
     const player = session.state.players[session.state.currentPlayerIndex];
     clickButton(`C’est moi, ${player?.name}`);
+    playTurn(session);
+}
+
+function playTurn(session: Session): void {
     const action = nextAction(session);
     if (action.type === 'PASS') {
         clickButton('Passer');
@@ -122,7 +126,7 @@ function playNextTurn(session: Session): void {
     clickButton('Valider');
 }
 
-it('a failed initial save is repaired by the first turn, not treated as another tab', async () => {
+it('a failed initial save is shown on the game screen', async () => {
     const initialSave = vi.spyOn(storage, 'saveAll').mockRejectedValueOnce(new DOMException('Quota dépassé', 'QuotaExceededError'));
     const save = vi.spyOn(storage, 'saveTurn');
     const list = vi.spyOn(storage, 'listGames');
@@ -147,7 +151,12 @@ it('a failed initial save is repaired by the first turn, not treated as another 
         const [, id, initial] = initialSave.mock.calls[0]!;
         expect(await listGames(db)).toEqual([]);
 
-        playNextTurn(initial);
+        expect.soft(host.querySelector('main.handover [role="alert"]')?.textContent).toBe('Le dernier tour n’a pas pu être sauvegardé.');
+        const player = initial.state.players[initial.state.currentPlayerIndex];
+        clickButton(`C’est moi, ${player?.name}`);
+        expect(host.querySelector('main.play [role="alert"]')?.textContent).toBe('Le dernier tour n’a pas pu être sauvegardé.');
+
+        playTurn(initial);
         await act(async () => {
             await vi.waitFor(() => expect(save).toHaveBeenCalledOnce());
             await expect(save.mock.results[0]?.value).resolves.toBeUndefined();
@@ -156,7 +165,8 @@ it('a failed initial save is repaired by the first turn, not treated as another 
         expect(first?.events).toHaveLength(1);
         expect(await loadGame(db, id, 'resume')).toMatchObject({ consistent: true, session: first });
         expect(await getSetting(db, 'lastGameId')).toBe(id);
-        expect(host.querySelector('main.home')).toBeNull();
+        expect(host.querySelector('main.handover')).not.toBeNull();
+        expect(host.querySelector('[role="alert"]')).toBeNull();
     } finally {
         db.close();
     }

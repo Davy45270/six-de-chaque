@@ -207,8 +207,10 @@ export function App({ example }: { example?: OpenExample }) {
     const startNew = (config: GameConfig): void => {
         const gameId = `partie-${crypto.randomUUID()}`;
         const session: Session = { state: createGame(config, newSeed()), events: [] };
-        withDb(d => saveAll(d, gameId, session, config, { resumeOnReload: true }));
         open(session, config, gameId);
+        void dbReady.then(d => saveAll(d, gameId, session, config, { resumeOnReload: true })).catch(() => {
+            if (uiRef.current?.gameId === gameId) setSaveFailed(true);
+        });
     };
     // Le choix est écrit d'abord en copie synchrone (survit à un rechargement immédiat), puis dans la base.
     const toggleAppearance = (key: AppearanceKey, on: boolean, set: (on: boolean) => void): void => {
