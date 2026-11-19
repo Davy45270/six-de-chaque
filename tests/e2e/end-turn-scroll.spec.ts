@@ -30,12 +30,33 @@ async function deadPosition(page: Page): Promise<void> {
     await expect(page.getByTestId('dead-position')).toBeVisible();
 }
 
-test('the Pass button brings the top of the game back', async ({ page }) => {
-    await deadPosition(page);
-    const pass = page.getByRole('button', { name: 'Passer' });
-    await scrollTo(page, pass);
-    await pass.click();
-    await expectBackOnTop(page);
+// En position morte, l'ordinateur passe aussitôt après le joueur : la partie se termine. L'écran de fin, sur un
+// écran très bas, reste plus haut que la fenêtre : sans retour en haut, il s'ouvrirait défilé.
+async function expectEndOnTop(page: Page): Promise<void> {
+    const y = await scrollY(page);
+    console.log(`après le coup : scrollY=${y}`);
+    await expect(page.getByRole('heading', { name: 'Partie terminée' })).toBeVisible();
+    const end = await page.evaluate(() => ({ scrollHeight: document.documentElement.scrollHeight, innerHeight: window.innerHeight, scrollY: Math.round(window.scrollY) }));
+    console.log(`écran de fin : ${JSON.stringify(end)}`);
+    expect(end.scrollHeight, 'écran de fin trop court pour distinguer un retour en haut').toBeGreaterThan(end.innerHeight + 50);
+    expect(y, 'la page reste défilée après le coup').toBe(0);
+    expect(end.scrollY, 'l’écran de fin s’ouvre défilé').toBe(0);
+}
+test.describe('very low screen', () => {
+    test.use({ viewport: { width: 360, height: 320 } });
+    test('the Pass button brings the top of the game back', async ({ page }) => {
+        await deadPosition(page);
+        const pass = page.getByRole('button', { name: 'Passer' });
+        await scrollTo(page, pass);
+        await pass.click();
+        await expectEndOnTop(page);
+    });
+    test('the P shortcut brings the top of the game back', async ({ page }) => {
+        await deadPosition(page);
+        await scrollTo(page, page.getByRole('button', { name: 'Passer' }));
+        await page.keyboard.press('p');
+        await expectEndOnTop(page);
+    });
 });
 
 test('the Confirm exchange button brings the top of the game back', async ({ page }) => {
@@ -48,13 +69,6 @@ test('the Confirm exchange button brings the top of the game back', async ({ pag
     await expect(confirm).toBeEnabled();
     await scrollTo(page, confirm);
     await confirm.click();
-    await expectBackOnTop(page);
-});
-
-test('the P shortcut brings the top of the game back', async ({ page }) => {
-    await deadPosition(page);
-    await scrollTo(page, page.getByRole('button', { name: 'Passer' }));
-    await page.keyboard.press('p');
     await expectBackOnTop(page);
 });
 
