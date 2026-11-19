@@ -6,7 +6,7 @@ import { svgDataUrl, tileSvg } from './art';
 import type { TileAppearance } from './art';
 import { cellToScreen, fitBoard, panBy, screenToCell, zoomAt } from './camera';
 import type { Camera } from './camera';
-import { BOARD_BG, INK } from './palette';
+import { BOARD_BG, BOARD_BG_HIGH_CONTRAST, INK } from './palette';
 
 export const CELL_PX = 64;
 export interface BoardView {
@@ -35,7 +35,7 @@ async function loadTextures(opts: TileAppearance): Promise<Map<string, Texture>>
 
 export async function createBoardView(host: HTMLElement, opts: TileAppearance): Promise<BoardView> {
     const app = new Application();
-    await app.init({ background: BOARD_BG, resizeTo: host, antialias: true, autoDensity: true, resolution: Math.min(globalThis.devicePixelRatio || 1, 2), preference: 'webgl' });
+    await app.init({ background: opts.highContrast ? BOARD_BG_HIGH_CONTRAST : BOARD_BG, resizeTo: host, antialias: true, autoDensity: true, resolution: Math.min(globalThis.devicePixelRatio || 1, 2), preference: 'webgl' });
     host.appendChild(app.canvas);
     app.canvas.style.touchAction = 'none';
     let textures = await loadTextures(opts);
@@ -54,6 +54,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
         if (!last) return;
         const [view, ghost, cursor, tiles] = last;
         const s = CELL_PX * camera.zoom;
+        const ink = appearance.highContrast ? '#000000' : INK;
         grid.clear();
         // Repère discret : un point par case visible.
         const c0 = screenToCell(camera, 0, 0, CELL_PX), c1 = screenToCell(camera, app.screen.width, app.screen.height, CELL_PX);
@@ -62,7 +63,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
                 const { px, py } = cellToScreen(camera, x + 0.5, y + 0.5, CELL_PX);
                 grid.circle(px, py, Math.max(1, s * 0.03));
             }
-            grid.fill({ color: INK, alpha: 0.18 });
+            grid.fill({ color: ink, alpha: appearance.highContrast ? 1 : 0.18 });
         }
         layer.removeChildren().forEach(c => { c.destroy(); });
         const put = (id: TileId, x: number, y: number, alpha: number): void => {
@@ -85,7 +86,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
         }
         if (cursor) {
             const { px, py } = cellToScreen(camera, cursor.x, cursor.y, CELL_PX);
-            overlay.roundRect(px + 1, py + 1, s - 2, s - 2, s * 0.3).stroke({ width: Math.max(3, s * 0.08), color: INK });
+            overlay.roundRect(px + 1, py + 1, s - 2, s - 2, s * 0.3).stroke({ width: Math.max(3, s * 0.08), color: ink });
         }
     };
     const onResize = (): void => { if (!fitted && last) camera = fitBoard(last[0].board, app.screen.width, app.screen.height, CELL_PX, last[1]); draw(); };
@@ -150,6 +151,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
             const previous = textures;
             textures = next;
             appearance = nextAppearance;
+            app.renderer.background.color = appearance.highContrast ? BOARD_BG_HIGH_CONTRAST : BOARD_BG;
             draw();
             previous.forEach(t => { t.destroy(true); });
         },

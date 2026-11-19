@@ -15,6 +15,7 @@ const COLOR_NAMES_FEMININE = ['orange', 'ciel', 'verte', 'jaune', 'bleue', 'verm
 export const TILE_BG = '#F3E9D2';
 export const TILE_BG_HIGH_CONTRAST = '#FFFFFF';
 export const BOARD_BG = '#E9DCC0';
+export const BOARD_BG_HIGH_CONTRAST = '#FFFFFF';
 export const INK = '#3B2F1E';
 
 /** Nom accessible d'une tuile : « lune orange (plein) ». */
