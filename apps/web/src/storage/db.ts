@@ -2,7 +2,7 @@
 // `settings`. Un tour validé = une transaction (instantané + nouvel événement).
 import { replay, stateHash } from '@six-de-chaque/engine';
 import type { GameConfig, GameEvent, GameState, Session } from '@six-de-chaque/engine';
-import { checkedConfig, CURRENT_VERSION, migrate, migrateSave, SaveError } from './migrations';
+import { checkedConfig, CURRENT_VERSION, migrate, migrateSave, SaveError, selectEventFields } from './migrations';
 
 export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: typeof CURRENT_VERSION; checksum: string; updatedTurn: number }
 type StoredGame = Omit<SavedGame, 'version' | 'snapshot'> & { version: unknown; snapshot: unknown };
@@ -80,9 +80,8 @@ export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' 
         req(journal.getAll(IDBKeyRange.bound([gameId, 0], [gameId, Number.MAX_SAFE_INTEGER])) as IDBRequest<StoredEvent[]>)
     ]);
     if (!saved) throw new Error(`partie introuvable : ${gameId}`);
-    const events = rows.map(({ gameId: _g, ...e }) => e);
     if (saved.version !== CURRENT_VERSION) {
-        const migrated = migrateSave({ ...saved, events });
+        const migrated = migrateSave({ ...saved, events: rows });
         const session = { state: migrated.snapshot, events: migrated.events };
         games.put(record(gameId, session, migrated.config));
         for (const event of migrated.events) journal.put({ ...event, gameId } satisfies StoredEvent);
@@ -91,6 +90,7 @@ export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' 
     }
     if (!saved.snapshot || typeof saved.snapshot !== 'object' || !('version' in saved.snapshot) || saved.snapshot.version !== CURRENT_VERSION) throw new SaveError('Versions de la sauvegarde et de la partie différentes.');
     const state = migrate(saved.snapshot);
+    const events = rows.map(selectEventFields);
     const loaded = { session: { state, events }, config: saved.config, consistent: false };
     if (mode === 'inspect') return { ...loaded, consistent: isConsistent(saved.config, state, events, saved.checksum) };
 

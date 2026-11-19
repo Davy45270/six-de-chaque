@@ -95,6 +95,10 @@ export function checkedConfig(raw: unknown, version: 1 | typeof CURRENT_VERSION)
     } };
 }
 
+export function selectEventFields({ seq, actionId, action, score, finalBonus, prevHash, stateHash, hash }: GameEvent): GameEvent {
+    return { seq, actionId, action, score, finalBonus, prevHash, stateHash, hash };
+}
+
 export function migrateSave(save: SaveData): CurrentSave {
     checkVersion(save.version);
     if (save.version !== versionOf(save.snapshot)) throw new SaveError('Versions de la sauvegarde et de la partie différentes.');
@@ -112,10 +116,7 @@ export function migrateSave(save: SaveData): CurrentSave {
             if (stateHash(snapshot) !== save.checksum || canonicalJson(replay(config, snapshot.seed, oldEvents)) !== canonicalJson(snapshot)) {
                 throw new SaveError('Le journal des coups ne redonne pas cette partie.');
             }
-            const events = oldEvents.map(({ seq, actionId, action, score, finalBonus, prevHash, stateHash, hash }) => ({
-                seq, actionId, action, score, finalBonus, prevHash, stateHash, hash
-            }));
-            return { version: CURRENT_VERSION, config, snapshot, events, checksum: save.checksum };
+            return { version: CURRENT_VERSION, config, snapshot, events: oldEvents.map(selectEventFields), checksum: save.checksum };
         }
 
         let state = createGame(config, snapshot.seed);

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { expect, it } from 'vitest';
-import { openDb, saveAll, saveTurn } from '../src/storage/db';
+import { loadGame, openDb, saveAll, saveTurn } from '../src/storage/db';
 import { exportGame, importGame, parseExport, serializeGame } from '../src/storage/transfer';
 import { submit } from '@six-de-chaque/engine';
 import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
@@ -73,6 +73,35 @@ it('an imported save keeps no unknown field in its events', async () => {
         });
         expect.soft(stored).toEqual(session.events.map(event => ({ ...event, gameId })));
         expect(JSON.parse(await exportGame(db, gameId))).toEqual(parsed.save);
+    } finally {
+        db.close();
+    }
+});
+
+it('a stored event with an unknown field is never exported', async () => {
+    const config = configOf(2);
+    const session = playGame(config, 'journal-export', { maxTurns: 1 });
+    const event = session.events[0];
+    if (!event) throw new Error('Journal vide');
+    const extra = { ...event, note: 'champ inconnu' };
+    const db = await openDb('export-journal');
+    const gameId = 'partie-stockée';
+    try {
+        await saveAll(db, gameId, session, config);
+        const tx = db.transaction('events', 'readwrite');
+        tx.objectStore('events').put({ ...extra, gameId });
+        await new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => { resolve(); };
+            tx.onabort = () => { reject(tx.error ?? new Error('Transaction annulée')); };
+        });
+
+        const loaded = await loadGame(db, gameId);
+        expect(loaded.consistent).toBe(true);
+        expect.soft(loaded.session.events).toEqual(session.events);
+        const exported = JSON.parse(await exportGame(db, gameId)) as { events: unknown };
+        const serialized = JSON.parse(serializeGame({ ...session, events: [extra] }, config)) as { events: unknown };
+        expect.soft(exported.events).toEqual(session.events);
+        expect(serialized.events).toEqual(session.events);
     } finally {
         db.close();
     }
