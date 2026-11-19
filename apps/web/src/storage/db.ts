@@ -33,14 +33,29 @@ export function openDb(name = DB_NAME): Promise<IDBDatabase> {
 const record = (gameId: string, session: Session, config: GameConfig): SavedGame =>
     ({ id: gameId, config: checkedConfig(config, CURRENT_VERSION), snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
 
-export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, repairJournal = false): Promise<void> {
+export class StaleGameError extends Error {
+    constructor() {
+        super('Cette partie a été jouée dans un autre onglet ; rechargez pour reprendre.');
+        this.name = 'StaleGameError';
+    }
+}
+
+export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, savedState: GameState): Promise<void> {
+    const previousChecksum = stateHash(savedState);
+    const next = record(gameId, session, config);
     const finished = session.state.phase === 'finished';
     const tx = db.transaction(finished ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
-    tx.objectStore('games').put(record(gameId, session, config));
+    const games = tx.objectStore('games');
+    const stored = await req(games.get(gameId) as IDBRequest<StoredGame | undefined>);
+    if (!stored || stored.updatedTurn !== savedState.turnNumber || stored.checksum !== previousChecksum) {
+        throw new StaleGameError();
+    }
+
+    games.put(next);
     const journal = tx.objectStore('events');
-    // Après une transaction échouée, réécrire aussi les événements manquants.
-    for (const event of repairJournal ? session.events : session.events.slice(-1)) {
-        journal.put({ ...event, gameId } satisfies StoredEvent);
+    // Inclut les tours restés en mémoire après un échec d’écriture.
+    for (const event of session.events.slice(savedState.turnNumber)) {
+        journal.add({ ...event, gameId } satisfies StoredEvent);
     }
     if (finished) {
         const settings = tx.objectStore('settings');

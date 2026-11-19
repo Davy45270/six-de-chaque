@@ -1,7 +1,7 @@
 // Application : écrans, partie en cours, ordinateur dans un Worker, sauvegarde après chaque coup accepté.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createGame, projectPublicState, stateHash, submit } from '@six-de-chaque/engine';
-import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
+import type { GameAction, GameConfig, GameState, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
 import { chooseAiMove } from './game/ai-turn';
@@ -10,7 +10,7 @@ import type { SavedResume } from './game/resume';
 import type { UiCommand, UiState } from './game/controller';
 import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
-import { completeChallenge, getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting } from './storage/db';
+import { completeChallenge, getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting, StaleGameError } from './storage/db';
 import { exportGame, importGame, serializeGame } from './storage/transfer';
 import { addCompleted, readAppearance, readCompleted, writeAppearance } from './storage/fallback';
 import type { AppearanceKey } from './storage/fallback';
@@ -46,7 +46,7 @@ export function App({ example }: { example?: OpenExample }) {
     const [saving, setSaving] = useState(false);
     const [saveFailed, setSaveFailed] = useState(false);
     const savingTurn = useRef(false);
-    const incompleteJournal = useRef(false);
+    const unsavedSince = useRef<GameState | null>(null);
     const [zoom, setZoom] = useState({ n: 0, factor: 1 });
     const client = useRef<AiClient | null>(null);
     const uiRef = useRef<UiState | null>(null);
@@ -91,7 +91,8 @@ export function App({ example }: { example?: OpenExample }) {
         setUi(next);
         setAnnounce('');
         setSaveFailed(false);
-        incompleteJournal.current = false;
+        unsavedSince.current = null;
+        setMessage(null);
         setScreen(session.state.phase === 'finished' ? 'end' : 'play');
         if (session.state.phase !== 'finished') withDb(d => setSetting(d, 'lastGameId', gameId));
     }, [withDb]);
@@ -105,14 +106,26 @@ export function App({ example }: { example?: OpenExample }) {
             savingTurn.current = true;
             setSaving(true);
             try {
-                await saveTurn(await dbReady, cur.gameId, session, cur.config, incompleteJournal.current);
-                incompleteJournal.current = false;
-            } catch {
-                incompleteJournal.current = true;
+                await saveTurn(await dbReady, cur.gameId, session, cur.config, unsavedSince.current ?? cur.session.state);
+                unsavedSince.current = null;
+                setSaveFailed(false);
+            } catch (error) {
+                if (error instanceof StaleGameError) {
+                    uiRef.current = null;
+                    setUi(null);
+                    setResume(null);
+                    unsavedSince.current = null;
+                    setSaveFailed(false);
+                    setMessage(error.message);
+                    setScreen('home');
+                    return;
+                }
+                unsavedSince.current ??= cur.session.state;
+                setSaveFailed(true);
+            } finally {
+                savingTurn.current = false;
+                setSaving(false);
             }
-            savingTurn.current = false;
-            setSaving(false);
-            setSaveFailed(incompleteJournal.current);
         }
         setUi(withSession(cur, session));
         setAnnounce(describeEvent(result.event, cur.config, session.state.tilesById));

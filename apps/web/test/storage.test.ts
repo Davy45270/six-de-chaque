@@ -20,8 +20,9 @@ describe('storage', () => {
         await saveAll(db, 'g1', s, config);
         const full = game(5);
         for (let i = 1; i <= 5; i++) {
+            const previous = s.state;
             s = { state: i === 5 ? full.state : playGame(config, 'sauvegarde', { maxTurns: i }).state, events: full.events.slice(0, i) };
-            await saveTurn(db, 'g1', s, config);
+            await saveTurn(db, 'g1', s, config, previous);
         }
         const loaded = await loadGame(db, 'g1');
         expect(loaded.session).toEqual(full);

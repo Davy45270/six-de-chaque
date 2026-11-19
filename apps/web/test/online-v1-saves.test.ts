@@ -125,7 +125,7 @@ describe('online v1 saves', () => {
                 if (!player || !move) throw new Error(`${name} : aucun coup légal`);
                 const next = submit(loaded.session, { type: 'PLACE', actorId: player.id, expectedTurn: state.turnNumber, actionId: `suite-${name}`, placements: move.placements });
                 expect(next.result.ok, name).toBe(true);
-                await saveTurn(db, v1.id, next.session, loaded.config);
+                await saveTurn(db, v1.id, next.session, loaded.config, state);
                 const reread = await loadGame(db, v1.id);
                 expect(reread.consistent, name).toBe(true);
                 expect(reread.session, name).toEqual(next.session);

@@ -90,6 +90,70 @@ function clickButton(label: string): void {
     act(() => { button.click(); });
 }
 
+async function resumeSavedGame(): Promise<void> {
+    const load = vi.spyOn(storage, 'loadGame');
+    const waitForLoad = async (count: number) => {
+        await act(async () => {
+            await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(count));
+            await load.mock.results[count - 1]?.value;
+        });
+    };
+    mount();
+    await waitForLoad(1);
+    clickButton('Reprendre la partie');
+    await waitForLoad(2);
+}
+
+function playNextTurn(session: Session): void {
+    const player = session.state.players[session.state.currentPlayerIndex];
+    clickButton(`C’est moi, ${player?.name}`);
+    const action = nextAction(session);
+    if (action.type === 'PASS') {
+        clickButton('Passer');
+        return;
+    }
+    if (action.type !== 'PLACE') throw new Error('Pose ou passe attendue');
+    for (const { tileId, x, y } of action.placements) {
+        const tile = host.querySelector<HTMLButtonElement>(`button[data-tile="${tileId}"]`);
+        if (!tile || !board.onTap) throw new Error('Galet et plateau attendus');
+        act(() => { tile.click(); });
+        act(() => { board.onTap?.(x, y); });
+    }
+    clickButton('Valider');
+}
+
+it('a turn written from a stale tab is refused and the saved journal stays intact', async () => {
+    const config = { players: configOf(2).players.map(p => ({ ...p, type: 'human' as const })) };
+    const seed = 'onglets';
+    const initial = playGame(config, seed, { maxTurns: 0 });
+    const db = await openDb();
+    try {
+        await saveAll(db, gameId, initial, config);
+        await setSetting(db, 'lastGameId', gameId);
+        await resumeSavedGame();
+
+        const first = playGame(config, seed, { maxTurns: 1 });
+        const second = playGame(config, seed, { maxTurns: 2 });
+        await storage.saveTurn(db, gameId, first, config, initial.state);
+        await storage.saveTurn(db, gameId, second, config, first.state);
+        const before = await readSave(db);
+
+        const save = vi.spyOn(storage, 'saveTurn');
+        playNextTurn(initial);
+        await act(async () => {
+            await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+            await Promise.allSettled([save.mock.results[0]?.value]);
+        });
+        await expect(save.mock.results[0]?.value).rejects.toBeInstanceOf(storage.StaleGameError);
+        expect.soft(await readSave(db) === before).toBe(true);
+        expect.soft(await loadGame(db, gameId, 'resume')).toMatchObject({ consistent: true, session: second });
+        expect(host.querySelector('[role="alert"]')?.textContent).toBe('Cette partie a été jouée dans un autre onglet ; rechargez pour reprendre.');
+        expect(host.textContent).not.toContain('Reprendre la partie');
+    } finally {
+        db.close();
+    }
+});
+
 it('a corrupted snapshot is rebuilt from an intact journal', async () => {
     const config = { players: [
         { id: 'alice', name: 'Alice', type: 'human' as const },

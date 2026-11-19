@@ -43,9 +43,9 @@ it('the saved snapshot carries no authentication secret', async () => {
         read.onerror = () => { reject(read.error ?? new Error('lecture')); };
     });
     try {
-        await saveAll(db, 'partie-1', session, injected);
+        await saveAll(db, 'partie-1', initial, injected);
         const savedAll = await Promise.all([readStore('games'), readStore('events')]);
-        await saveTurn(db, 'partie-1', session, injected);
+        await saveTurn(db, 'partie-1', session, injected, initial.state);
         const savedTurn = await Promise.all([readStore('games'), readStore('events')]);
         expect(findSecrets({
             savedAll, savedTurn, serialized: JSON.parse(serializeGame(session, injected)) as unknown
