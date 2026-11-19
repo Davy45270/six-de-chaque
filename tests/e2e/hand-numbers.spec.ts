@@ -24,7 +24,7 @@ test('after a placement, key 2 selects the tile announced as 2', async ({ page }
 });
 
 // Le numéro de la touche (1 à 6) se voit sur chaque galet de la main, posé en fantôme compris : texte visible égal
-// à N, boîte non vide et opacité effective non nulle, contraste 4,5:1 sur son propre fond, sans chevaucher
+// à N, boîte non vide et opacité effective non nulle, ni masque, ni découpe, ni visibilité cachée sur lui ou un ancêtre, contraste 4,5:1 sur son propre fond, sans chevaucher
 // l'initiale daltonienne ni la boîte du glyphe (lues dans le SVG du galet). Trois formats, deux apparences.
 test('every hand tile shows its key number', async ({ page }) => {
     for (const highContrast of [false, true]) {
@@ -47,7 +47,23 @@ test('every hand tile shows its key number', async ({ page }) => {
                 const img = b.querySelector('img');
                 if (!key || !img) return null;
                 let opacity = 1;
-                for (let e: Element | null = key; e; e = e.parentElement) opacity *= Number(getComputedStyle(e).opacity);
+                // Ce qui peut effacer le numéro sans toucher à son opacité : masque, découpe, visibilité, contenu
+                // escamoté, sur le numéro lui-même ou l'un de ses ancêtres.
+                const hiders: string[] = [];
+                for (let e: Element | null = key; e; e = e.parentElement) {
+                    const st = getComputedStyle(e);
+                    opacity *= Number(st.opacity);
+                    const tag = e === key ? 'numéro' : `${e.tagName.toLowerCase()}${e.className ? `.${e.className.trim().replace(/\s+/g, '.')}` : ''}`;
+                    const css = (name: string): string => st.getPropertyValue(name).trim();
+                    for (const name of ['mask-image', '-webkit-mask-image', 'clip-path']) {
+                        const v = css(name);
+                        if (v && v !== 'none') hiders.push(`${tag} : ${name}=${v}`);
+                    }
+                    const mask = css('mask');
+                    if (mask && !/^none\b/.test(mask)) hiders.push(`${tag} : mask=${mask}`);
+                    if (css('visibility') === 'hidden' || css('visibility') === 'collapse') hiders.push(`${tag} : visibility=${css('visibility')}`);
+                    if (css('content-visibility') === 'hidden') hiders.push(`${tag} : content-visibility=hidden`);
+                }
                 const cs = getComputedStyle(key);
                 const hex = (s: string): string => `#${(s.match(/[\d.]+/g) ?? []).slice(0, 3).map(v => Math.round(Number(v)).toString(16).padStart(2, '0')).join('')}`;
                 const alpha = (s: string): number => (s.startsWith('rgba') ? Number(s.match(/[\d.]+/g)?.[3] ?? 1) : 1);
@@ -62,7 +78,7 @@ test('every hand tile shows its key number', async ({ page }) => {
                 return {
                     text: (b as HTMLElement).innerText.trim(), keyText: (key as HTMLElement).innerText.trim(),
                     key: { left: kr.left, top: kr.top, right: kr.right, bottom: kr.bottom, width: kr.width, height: kr.height },
-                    opacity, visibility: cs.visibility, display: cs.display, fg: hex(cs.color), bg: hex(cs.backgroundColor), bgAlpha: alpha(cs.backgroundColor),
+                    opacity, hiders, visibility: cs.visibility, display: cs.display, fg: hex(cs.color), bg: hex(cs.backgroundColor), bgAlpha: alpha(cs.backgroundColor),
                     initial: ini ? box(Number(ini[1]), Number(ini[2]), Number(ini[3]), Number(ini[4])) : null,
                     glyph: tr ? box(Number(tr[1]), Number(tr[2]), 24 * Number(tr[3]), 24 * Number(tr[3])) : null,
                     placed: b.classList.contains('placed')
@@ -82,6 +98,7 @@ test('every hand tile shows its key number', async ({ page }) => {
                 expect(t.opacity, what).toBe(1);
                 expect(t.visibility, what).toBe('visible');
                 expect(t.display, what).not.toBe('none');
+                expect(t.hiders, `${what} : masque, découpe ou visibilité sur le numéro ou un ancêtre`).toEqual([]);
                 expect(t.bgAlpha, `${what} : fond opaque`).toBe(1);
                 expect(contrastRatio(t.fg, t.bg), `${what} : ${t.fg} sur ${t.bg}`).toBeGreaterThanOrEqual(4.5);
                 // 3. Il ne chevauche ni l'initiale daltonienne ni la boîte du glyphe.
