@@ -448,3 +448,42 @@ it('after a failed save the export contains the finished game shown', async () =
         db.close();
     }
 });
+
+it.each([
+    { name: 'an empty seed parameter starts a game with a random seed', query: '?seed=' },
+    { name: 'a whitespace-only seed parameter starts a game with a random seed', query: '?seed=%20%20' }
+])('$name', async ({ query }) => {
+    const originalUrl = location.href;
+    const randomSeed = '00000000-0000-4000-8000-000000000002';
+    const randomUUID = vi.spyOn(crypto, 'randomUUID')
+        .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
+        .mockReturnValueOnce(randomSeed);
+    const save = vi.spyOn(storage, 'saveAll');
+    const list = vi.spyOn(storage, 'listGames');
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+        event.preventDefault();
+        errors.push(event.error);
+    };
+    window.addEventListener('error', onError);
+    try {
+        history.replaceState(null, '', query);
+        mount();
+        await act(async () => {
+            await vi.waitFor(() => expect(list).toHaveBeenCalledOnce());
+            await list.mock.results[0]?.value;
+        });
+        clickButton('Nouvelle partie');
+        clickButton('Commencer');
+        expect(errors).toEqual([]);
+        await act(async () => {
+            await vi.waitFor(() => expect(save).toHaveBeenCalledOnce());
+            await save.mock.results[0]?.value;
+        });
+        expect(save.mock.calls[0]?.[2].state.seed).toBe(randomSeed);
+        expect(randomUUID).toHaveBeenCalledTimes(2);
+    } finally {
+        history.replaceState(null, '', originalUrl);
+        window.removeEventListener('error', onError);
+    }
+});

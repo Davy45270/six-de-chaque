@@ -25,7 +25,10 @@ import { Challenges } from './screens/Challenges';
 
 type Screen = 'home' | 'setup' | 'play' | 'end' | 'replay' | 'about' | 'challenges';
 const AI_DELAY_MS = 600;
-const newSeed = (): string => new URLSearchParams(location.search).get('seed') ?? crypto.randomUUID();
+function newSeed(): string {
+    const seed = new URLSearchParams(location.search).get('seed');
+    return seed?.trim() ? seed : crypto.randomUUID();
+}
 
 export function App({ example }: { example?: OpenExample }) {
     // Une seule ouverture ; chaque écriture attend la base, même si l'utilisateur agit avant qu'elle soit prête.
