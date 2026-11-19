@@ -2,9 +2,10 @@
 // `settings`. Un tour validé = une transaction (instantané + nouvel événement).
 import { replay, stateHash } from '@six-de-chaque/engine';
 import type { GameConfig, GameEvent, GameState, Session } from '@six-de-chaque/engine';
-import { migrate } from './migrations';
+import { CURRENT_VERSION, migrate, migrateSave, SaveError } from './migrations';
 
-export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: 1; checksum: string; updatedTurn: number }
+export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: typeof CURRENT_VERSION; checksum: string; updatedTurn: number }
+type StoredGame = Omit<SavedGame, 'version' | 'snapshot'> & { version: unknown; snapshot: unknown };
 export type SettingKey = 'highContrast' | 'lastGameId';
 type StoredEvent = GameEvent & { gameId: string };
 
@@ -31,7 +32,7 @@ export function openDb(name = DB_NAME): Promise<IDBDatabase> {
 }
 
 const record = (gameId: string, session: Session, config: GameConfig): SavedGame =>
-    ({ id: gameId, config, snapshot: session.state, version: 1, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
+    ({ id: gameId, config, snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
 
 export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig): Promise<void> {
     const tx = db.transaction(['games', 'events'], 'readwrite');
@@ -50,12 +51,6 @@ export async function saveAll(db: IDBDatabase, gameId: string, session: Session,
     await done(tx);
 }
 
-async function eventsOf(db: IDBDatabase, gameId: string): Promise<GameEvent[]> {
-    const tx = db.transaction('events', 'readonly');
-    const rows = await req(tx.objectStore('events').getAll(IDBKeyRange.bound([gameId, 0], [gameId, Number.MAX_SAFE_INTEGER])) as IDBRequest<StoredEvent[]>);
-    return rows.sort((a, b) => a.seq - b.seq).map(({ gameId: _g, ...e }) => e);
-}
-
 /** Vrai si le rejeu du journal redonne exactement l'instantané et son empreinte. */
 export function isConsistent(config: GameConfig, snapshot: GameState, events: readonly GameEvent[], checksum: string): boolean {
     try {
@@ -65,12 +60,27 @@ export function isConsistent(config: GameConfig, snapshot: GameState, events: re
 }
 
 export async function loadGame(db: IDBDatabase, gameId: string): Promise<{ session: Session; config: GameConfig; consistent: boolean }> {
-    const tx = db.transaction('games', 'readonly');
-    const saved = await req(tx.objectStore('games').get(gameId) as IDBRequest<SavedGame | undefined>);
+    const tx = db.transaction(['games', 'events'], 'readwrite');
+    const games = tx.objectStore('games');
+    const journal = tx.objectStore('events');
+    const [saved, rows] = await Promise.all([
+        req(games.get(gameId) as IDBRequest<StoredGame | undefined>),
+        req(journal.getAll(IDBKeyRange.bound([gameId, 0], [gameId, Number.MAX_SAFE_INTEGER])) as IDBRequest<StoredEvent[]>)
+    ]);
     if (!saved) throw new Error(`partie introuvable : ${gameId}`);
-    const events = await eventsOf(db, gameId);
+    const events = rows.map(({ gameId: _g, ...e }) => e);
+    if (saved.version !== CURRENT_VERSION) {
+        const migrated = migrateSave({ ...saved, events });
+        const session = { state: migrated.snapshot, events: migrated.events };
+        games.put(record(gameId, session, migrated.config));
+        for (const event of migrated.events) journal.put({ ...event, gameId } satisfies StoredEvent);
+        await done(tx);
+        return { session, config: migrated.config, consistent: true };
+    }
+    if (!saved.snapshot || typeof saved.snapshot !== 'object' || !('version' in saved.snapshot) || saved.snapshot.version !== CURRENT_VERSION) throw new SaveError('Versions de la sauvegarde et de la partie différentes.');
     const state = migrate(saved.snapshot);
-    return { session: { state, events }, config: saved.config, consistent: isConsistent(saved.config, state, events, saved.checksum) };
+    return { session: { state, events }, config: saved.config,
+        consistent: isConsistent(saved.config, state, events, saved.checksum) };
 }
 
 export async function listGames(db: IDBDatabase): Promise<Array<Pick<SavedGame, 'id' | 'updatedTurn'> & { finished: boolean }>> {

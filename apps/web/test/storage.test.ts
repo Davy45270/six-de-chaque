@@ -1,10 +1,11 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { stateHash } from '@six-de-chaque/engine';
+import blocked from '../../../tests/fixtures/blocked.json';
+import { canonicalJson, eventHash, fnv1a64, GENESIS_HASH, replay, stateHash } from '@six-de-chaque/engine';
 import type { Session } from '@six-de-chaque/engine';
 import { listGames, loadGame, openDb, saveAll, saveTurn, getSetting, setSetting, deleteGame } from '../src/storage/db';
-import { migrate } from '../src/storage/migrations';
-import { exportGame, importGame } from '../src/storage/transfer';
+import { migrate, migrateSave, SaveError } from '../src/storage/migrations';
+import { exportGame, importGame, parseExport } from '../src/storage/transfer';
 import { configOf, playGame } from '../../../packages/engine/test/play';
 
 let n = 0;
@@ -77,10 +78,71 @@ describe('storage', () => {
         expect(copy.session.events).toEqual(s.events);
         expect(copy.consistent).toBe(true);
     });
-    it('migrate rejects version 2', () => {
-        expect(() => migrate({ ...game(0).state, version: 2 })).toThrow(/version/);
-        expect(() => migrate(null)).toThrow();
-        expect(migrate(JSON.parse(JSON.stringify(game(1).state)))).toEqual(game(1).state);
+    it('migrates a strict v1 snapshot to v2', () => {
+        const initial = game(0).state;
+        const strict = (state: typeof initial) => {
+            const { consecutivePasses: _p, config: _c, endReason: _e, ...base } = state;
+            return { ...base, version: 1, players: base.players.map(({ aiLevel: _a, ...p }) => p) };
+        };
+        const snapshot = strict(initial);
+        expect(migrate(snapshot)).toEqual(initial);
+        expect(migrate({ ...snapshot, phase: 'finished' })).toMatchObject({ endReason: 'blocked', consecutivePasses: 2 });
+        expect(migrate({ ...snapshot, phase: 'finished', players: snapshot.players.map((p, i) => i === 0 ? { ...p, hand: [] } : p) }))
+            .toMatchObject({ endReason: 'out', consecutivePasses: 0 });
+        const progressed = game(3);
+        let previous = GENESIS_HASH;
+        const events = progressed.events.map((event, i) => {
+            const legacy = { ...event, prevHash: previous, stateHash: fnv1a64(canonicalJson(strict(game(i + 1).state))) };
+            legacy.hash = eventHash(previous, legacy);
+            previous = legacy.hash;
+            return legacy;
+        });
+        const oldSnapshot = strict(progressed.state);
+        const migrated = migrateSave({ version: 1, config: { players: config.players.map(({ aiLevel: _a, ...p }) => p) },
+            snapshot: oldSnapshot, events, checksum: fnv1a64(canonicalJson(oldSnapshot)) });
+        expect({ state: migrated.snapshot, events: migrated.events }).toEqual(progressed);
+    });
+    it('migrates a published extended v1 save and its log to v2', async () => {
+        const db = await fresh();
+        const parsed = parseExport(JSON.stringify(blocked));
+        if (!parsed.ok) throw new Error(parsed.reason);
+        const save = parsed.save;
+        expect(save.version).toBe(2);
+        expect(save.snapshot).toEqual({ ...blocked.snapshot, version: 2 });
+        expect(save.events.map(e => e.action)).toEqual(blocked.events.map(e => e.action));
+        expect(save.events.at(-1)?.hash).not.toBe(blocked.events.at(-1)?.hash);
+        expect(replay(save.config, save.seed, save.events)).toEqual(save.snapshot);
+        expect(await importGame(db, JSON.stringify(blocked), () => 'bloc')).toEqual({ ok: true, gameId: 'bloc' });
+        expect(JSON.parse(await exportGame(db, 'bloc'))).toEqual(save);
+        const tx = db.transaction(['games', 'events'], 'readwrite');
+        tx.objectStore('games').put({ ...blocked, id: 'ancien', updatedTurn: blocked.snapshot.turnNumber });
+        for (const event of blocked.events) tx.objectStore('events').put({ ...event, gameId: 'ancien' });
+        expect((await loadGame(db, 'ancien')).session).toEqual({ state: save.snapshot, events: save.events });
+        const updated = db.transaction('games').objectStore('games').get('ancien') as IDBRequest<{ version: number }>;
+        await expect(new Promise(resolve => { updated.onsuccess = () => resolve(updated.result.version); })).resolves.toBe(2);
+    });
+    it('migration refuses a v1 log that does not replay to its snapshot', async () => {
+        const db = await fresh();
+        const snapshot = structuredClone(blocked.snapshot);
+        snapshot.players[0]!.score += 1;
+        const save = { ...blocked, snapshot, checksum: fnv1a64(canonicalJson(snapshot)) };
+        expect(() => migrateSave(save)).toThrow(SaveError);
+        expect((await importGame(db, JSON.stringify(save))).ok).toBe(false);
+        const events = structuredClone(blocked.events);
+        events[0]!.hash = '0'.repeat(16);
+        expect(() => migrateSave({ ...blocked, events })).toThrow(SaveError);
+        expect(await listGames(db)).toEqual([]);
+        const tx = db.transaction(['games', 'events'], 'readwrite');
+        tx.objectStore('games').put({ ...save, id: 'refus', updatedTurn: snapshot.turnNumber });
+        for (const event of save.events) tx.objectStore('events').put({ ...event, gameId: 'refus' });
+        await expect(loadGame(db, 'refus')).rejects.toBeInstanceOf(SaveError);
+        const unchanged = db.transaction('games').objectStore('games').get('refus') as IDBRequest<{ version: number }>;
+        await expect(new Promise(resolve => { unchanged.onsuccess = () => resolve(unchanged.result.version); })).resolves.toBe(1);
+    });
+    it('unknown save version is refused', () => {
+        expect(() => migrate({ ...game(0).state, version: 9 })).toThrow(SaveError);
+        expect(() => migrateSave({ ...blocked, version: 9 })).toThrow(SaveError);
+        expect(parseExport(JSON.stringify({ ...blocked, version: 9 })).ok).toBe(false);
     });
     it('settings persist', async () => {
         const db = await fresh();

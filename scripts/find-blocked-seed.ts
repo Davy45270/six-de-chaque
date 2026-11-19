@@ -1,6 +1,5 @@
 // Cherche une graine dont la partie à deux (« premier coup légal ») finit par blocage, et rend la sauvegarde
-// d'export arrêtée juste avant la dernière série de passes. Écrite dans tests/fixtures/blocked.json par
-// `WRITE_BLOCKED=1 npx vitest run tests/blocked-fixture.test.ts`.
+// d'export v2 arrêtée juste avant la dernière série de passes. La référence v1 reste dans les tests.
 import { createGame, getLegalMoves, stateHash, submit, validateAction } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 
@@ -33,7 +32,7 @@ export function findBlockedSave(maxSeeds = 10_000): { seed: string; json: string
         while (cut > 0 && session.events[cut - 1]?.action.type === 'PASS') cut--;
         const kept = history[cut] as Session;
         const snapshot = kept.state;
-        const json = JSON.stringify({ format: 'six-de-chaque-save', version: 1, config: BLOCKED_CONFIG, seed, snapshot, events: kept.events, checksum: stateHash(snapshot) });
+        const json = JSON.stringify({ format: 'six-de-chaque-save', version: snapshot.version, config: BLOCKED_CONFIG, seed, snapshot, events: kept.events, checksum: stateHash(snapshot) });
         return { seed, json };
     }
     return null;
