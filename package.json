@@ -1,6 +1,6 @@
 {
   "name": "six-de-chaque",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Six de chaque : jeu de tuiles couleur et forme, hors ligne, de 2 à 4 joueurs.",
   "license": "MIT",
@@ -22,6 +22,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --max-warnings=0",
     "test": "vitest run --pool=threads --maxWorkers=2 --coverage",
+    "e2e": "npm run test:e2e --",
+    "package": "node scripts/package.js",
     "test:e2e": "playwright test",
     "test:mutation": "stryker run",
     "puzzles:generate": "node scripts/puzzles.js generate",

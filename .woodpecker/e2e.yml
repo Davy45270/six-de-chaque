@@ -17,6 +17,8 @@ steps:
     image: &playwright mcr.microsoft.com/playwright:v1.65.0-noble
     environment:
       PW_IMAGE: *playwright
+      T17_RUNS: "20"
+      AI_RUNS: "20"
     commands:
       - |
         # DejaVu fonts: the image has none (sans-serif = WenQuanYi), the GitHub runners have them.
@@ -43,5 +45,12 @@ steps:
         GOT=$(node -p "require('@playwright/test/package.json').version")
         echo "Playwright : image $$WANT, dépôt $$GOT"
         [ -n "$$WANT" ] && [ "$$WANT" = "$$GOT" ] || { echo "versions divergentes : changer l'image de .woodpecker/e2e.yml"; exit 1; }
+        # Les espaces de travail des workflows sont distincts.
+        npm test
+        npm sbom --sbom-format cyclonedx > sbom.json
         npm run build
-        npm run test:e2e -- --pass-with-no-tests
+        npm run e2e -- --pass-with-no-tests
+  - name: package
+    image: harbor.pingfr.duckdns.org/dockerhub/library/node:26
+    commands:
+      - npm run package

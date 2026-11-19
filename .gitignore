@@ -12,3 +12,4 @@ coverage/
 .stryker-tmp/
 reports/
 sbom.json
+release/
