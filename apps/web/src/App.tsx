@@ -62,9 +62,9 @@ export function App({ example }: { example?: OpenExample }) {
             setCompleted(previous => new Set([...(progress ?? []), ...previous]));
             const last = await getSetting<string>(d, 'lastGameId');
             const games = await listGames(d);
-            const g = games.find(x => x.id === last && !x.finished);
+            const g = games.find(x => x.id === last);
             if (g) {
-                const loaded = await loadGame(d, g.id).catch(() => null);
+                const loaded = await loadGame(d, g.id, 'preview').catch(() => null);
                 const status = savedResumeStatus(g.id, loaded);
                 setResume(status.resume);
                 if (status.message) setMessage(status.message);
@@ -231,14 +231,14 @@ export function App({ example }: { example?: OpenExample }) {
             }
             if (offer?.source === 'saved') withDb(async d => {
                 const { id } = offer.save;
-                try {
-                    const g = await loadGame(d, id);
-                    if (g.session.state.phase === 'finished') {
-                        setResume(saved => saved?.id === id ? null : saved);
-                        return;
-                    }
+                const g = await loadGame(d, id, 'resume').catch(() => null);
+                const status = savedResumeStatus(id, g);
+                if (g && status.resume) {
                     open(g.session, g.config, id);
-                } catch { setMessage('Impossible de relire cette partie.'); }
+                } else {
+                    setResume(saved => saved?.id === id ? null : saved);
+                    setMessage(status.message);
+                }
             });
         }}
         onImport={text => {

@@ -67,7 +67,9 @@ export function isConsistent(config: GameConfig, snapshot: GameState, events: re
     } catch { return false; }
 }
 
-export async function loadGame(db: IDBDatabase, gameId: string): Promise<{ session: Session; config: GameConfig; consistent: boolean }> {
+export interface LoadedGame { session: Session; config: GameConfig; consistent: boolean; recovered?: boolean }
+
+export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' | 'preview' | 'resume' = 'inspect'): Promise<LoadedGame> {
     const tx = db.transaction(['games', 'events'], 'readwrite');
     const games = tx.objectStore('games');
     const journal = tx.objectStore('events');
@@ -87,8 +89,24 @@ export async function loadGame(db: IDBDatabase, gameId: string): Promise<{ sessi
     }
     if (!saved.snapshot || typeof saved.snapshot !== 'object' || !('version' in saved.snapshot) || saved.snapshot.version !== CURRENT_VERSION) throw new SaveError('Versions de la sauvegarde et de la partie différentes.');
     const state = migrate(saved.snapshot);
-    return { session: { state, events }, config: saved.config,
-        consistent: isConsistent(saved.config, state, events, saved.checksum) };
+    const loaded = { session: { state, events }, config: saved.config, consistent: false };
+    if (mode === 'inspect') return { ...loaded, consistent: isConsistent(saved.config, state, events, saved.checksum) };
+
+    let recovered: LoadedGame;
+    try {
+        const config = checkedConfig(saved.config, CURRENT_VERSION);
+        const replayed = replay(config, state.seed, events);
+        const hash = stateHash(replayed);
+        if (hash === saved.checksum && hash === stateHash(state)) return { ...loaded, config, consistent: true };
+        recovered = { session: { state: replayed, events }, config, consistent: true, recovered: true };
+    } catch {
+        return loaded;
+    }
+    if (mode === 'resume') {
+        games.put(record(gameId, recovered.session, recovered.config));
+        await done(tx);
+    }
+    return recovered;
 }
 
 export async function listGames(db: IDBDatabase): Promise<Array<Pick<SavedGame, 'id' | 'updatedTurn'> & { finished: boolean }>> {
