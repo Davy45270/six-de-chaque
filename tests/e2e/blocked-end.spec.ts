@@ -14,7 +14,7 @@ test('blocked-end', async ({ page }) => {
     await expect(page.getByText('Plus personne ne pouvait poser')).toBeVisible();
     await expect(page.getByTestId('winner')).toHaveText('Victoire : Toi');
     await page.getByRole('button', { name: 'Revoir la partie' }).click();
-    await expect(page.getByTestId('replay-step')).toContainText('Toi passe.');
+    await expect(page.getByTestId('replay-step')).toContainText(' — Tu passes.');
     await page.getByRole('button', { name: 'Début' }).click();
     await expect(page.getByTestId('replay-step')).toContainText('Coup 0');
 });
