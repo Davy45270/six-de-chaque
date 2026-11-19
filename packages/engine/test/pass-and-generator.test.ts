@@ -46,6 +46,31 @@ function frontierCells(state: GameState): number {
 
 describe('move generation', () => {
     it('move generation is bounded by frontier cells, hand subsets and candidate placements', () => {
+        const check = (state: GameState, where: string) => {
+            const player = state.players[state.currentPlayerIndex];
+            if (!player) throw new Error('joueur courant');
+            const frontier = frontierCells(state);
+            const handSize = player.hand.length;
+            let orderedSubsets = 1;
+            let workPerCell = handSize === 0 ? 1 : 0;
+            for (let size = 1; size <= handSize; size++) {
+                // Un préfixe ordonné s'étend avec au plus handSize - size + 1 tuiles.
+                // Sans tuile compatible, tryCell ne suspend qu'une fois, ce qui tient dans ce nombre.
+                orderedSubsets *= handSize - size + 1;
+                // Une case de départ, puis le choix de l'axe et jusqu'à deux extrémités à chaque extension.
+                const placements = size === 1 ? 1 : 2 * 2 ** (size - 1);
+                workPerCell += orderedSubsets * placements;
+            }
+            const bound = frontier * workPerCell;
+            const moves = getLegalMoves(state, player.id).length;
+            const work = [...scanLegalMoves(state, player.id)].length;
+            expect(moves, `${where} : ${moves} coups pour ${frontier} cases frontière`).toBeLessThanOrEqual(bound);
+            expect(work, `${where} : ${work} suspensions pour ${frontier} cases frontière`).toBeLessThanOrEqual(bound);
+        };
+        check(stateFrom({
+            board: [], hands: [[[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]], [[5, 5]]]
+        }), 'plateau vide, six formes de même couleur');
+
         let positions = 0;
         for (const seed of ['borne-1', 'borne-2', 'borne-3']) {
             let turn = 0;
@@ -53,18 +78,9 @@ describe('move generation', () => {
                 limit: 4, pick: n => (turn * 7) % Math.max(n, 1), maxTurns: 60,
                 each: session => {
                     turn++;
-                    const s = session.state;
-                    if (s.phase === 'finished') return;
-                    const player = s.players[s.currentPlayerIndex];
-                    if (!player) throw new Error('joueur courant');
-                    const subsets = 2 ** player.hand.length - 1;
-                    const bound = frontierCells(s) * subsets * 6;
-                    const moves = getLegalMoves(s, player.id).length;
-                    expect(moves, `${seed}, tour ${s.turnNumber} : ${moves} coups pour ${frontierCells(s)} cases frontière`).toBeLessThanOrEqual(bound);
-                    // Travail du générateur : chaque suspension de scanLegalMoves est une pose candidate essayée ou une
-                    // case sans tuile compatible ; leur nombre tient sous la même borne.
-                    const work = [...scanLegalMoves(s, player.id)].length;
-                    expect(work, `${seed}, tour ${s.turnNumber} : ${work} poses candidates`).toBeLessThanOrEqual(bound);
+                    const state = session.state;
+                    if (state.phase === 'finished') return;
+                    check(state, `${seed}, tour ${state.turnNumber}`);
                     positions++;
                 }
             });

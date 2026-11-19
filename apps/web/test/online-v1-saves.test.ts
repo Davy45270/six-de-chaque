@@ -48,6 +48,17 @@ async function loadDump(dump: V1Dump): Promise<IDBDatabase> {
     return db;
 }
 
+function readStores(db: IDBDatabase): Promise<unknown[][]> {
+    const tx = db.transaction(['games', 'events', 'settings']);
+    const settings = tx.objectStore('settings');
+    return Promise.all([
+        tx.objectStore('games').getAll(), tx.objectStore('events').getAll(), settings.getAllKeys(), settings.getAll()
+    ].map(request => new Promise<unknown[]>((resolve, reject) => {
+        request.onsuccess = () => { resolve(request.result); };
+        request.onerror = () => { reject(request.error ?? new Error('Lecture impossible')); };
+    })));
+}
+
 describe('online v1 saves', () => {
     it('every export produced by the online version imports into this version unchanged', async () => {
         for (const name of CASES) {
@@ -83,23 +94,30 @@ describe('online v1 saves', () => {
             const db = await loadDump(dump);
             const settings = new Map(dump.stores.settings.map(s => [s.key, s.value]));
 
-            // Parcours de démarrage de l'application : dernière partie, liste, chargement, offre de reprise.
+            // L'accueil lit la dernière partie, vérifie son aperçu, puis propose ou refuse la reprise.
             const last = await getSetting<string>(db, 'lastGameId');
             expect(last, name).toBe(v1.id);
             const games = await listGames(db);
             expect(games, name).toEqual([{ id: v1.id, updatedTurn: v1.snapshot.turnNumber, finished: FINISHED.has(name) }]);
-            const loaded = await loadGame(db, v1.id);
-            expect(loaded.consistent, name).toBe(true);
-            sameGame(loaded.session.state, v1.snapshot, name);
-            const offered = games.find(g => g.id === last && !g.finished);
-            const status = savedResumeStatus(v1.id, loaded);
-            if (FINISHED.has(name)) {
-                expect(offered, name).toBeUndefined();
-                expect(status, name).toEqual({ resume: null, message: null });
-            } else {
-                expect(offered?.id, name).toBe(v1.id);
-                expect(status, name).toEqual({ resume: { id: v1.id, note: null }, message: null });
+            const offered = games.find(g => g.id === last);
+            if (!offered) throw new Error(`${name} : partie introuvable`);
+            const beforePreview = await readStores(db);
+            const preview = await loadGame(db, offered.id, 'preview');
+            expect(preview.consistent, name).toBe(true);
+            sameGame(preview.session.state, v1.snapshot, name);
+            const status = savedResumeStatus(offered.id, preview);
+            expect(status, name).toEqual({ resume: FINISHED.has(name) ? null : { id: v1.id, note: null }, message: null });
+            expect(await readStores(db), name).toEqual(beforePreview);
 
+            // Vérifie aussi la migration explicite de la partie terminée, sans offre dans l'accueil.
+            const loaded = await loadGame(db, status.resume?.id ?? offered.id, 'resume');
+            expect(loaded, name).toEqual(preview);
+            const [storedGames, storedEvents] = await readStores(db);
+            expect(storedGames, name).toMatchObject([{
+                id: v1.id, version: CURRENT_VERSION, snapshot: loaded.session.state, checksum: stateHash(loaded.session.state)
+            }]);
+            expect(storedEvents, name).toEqual(loaded.session.events.map(event => ({ ...event, gameId: v1.id })));
+            if (status.resume) {
                 // Un coup légal joué puis sauvegardé se relit.
                 const state = loaded.session.state;
                 const player = state.players[state.currentPlayerIndex];

@@ -72,7 +72,7 @@ export function isConsistent(config: GameConfig, snapshot: GameState, events: re
 export interface LoadedGame { session: Session; config: GameConfig; consistent: boolean; recovered?: boolean }
 
 export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' | 'preview' | 'resume' = 'inspect'): Promise<LoadedGame> {
-    const tx = db.transaction(['games', 'events'], 'readwrite');
+    const tx = db.transaction(['games', 'events'], mode === 'preview' ? 'readonly' : 'readwrite');
     const games = tx.objectStore('games');
     const journal = tx.objectStore('events');
     const [saved, rows] = await Promise.all([
@@ -83,9 +83,11 @@ export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' 
     if (saved.version !== CURRENT_VERSION) {
         const migrated = migrateSave({ ...saved, events: rows });
         const session = { state: migrated.snapshot, events: migrated.events };
-        games.put(record(gameId, session, migrated.config));
-        for (const event of migrated.events) journal.put({ ...event, gameId } satisfies StoredEvent);
-        await done(tx);
+        if (mode !== 'preview') {
+            games.put(record(gameId, session, migrated.config));
+            for (const event of migrated.events) journal.put({ ...event, gameId } satisfies StoredEvent);
+            await done(tx);
+        }
         return { session, config: migrated.config, consistent: true };
     }
     if (!saved.snapshot || typeof saved.snapshot !== 'object' || !('version' in saved.snapshot) || saved.snapshot.version !== CURRENT_VERSION) throw new SaveError('Versions de la sauvegarde et de la partie différentes.');
