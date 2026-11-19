@@ -47,8 +47,8 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                 <ul className="players" aria-label="Scores">
                     {view.players.map((p, i) => (
                         <li key={p.id} className={i === view.currentPlayerIndex ? 'current' : ''} aria-current={i === view.currentPlayerIndex ? 'true' : undefined}>
-                            <span className="name">{p.name}</span>{' '}
-                            <span className="tally"><strong data-testid={`score-${p.id}`}>{p.score}</strong> pt · <span className="count">{p.handCount} tuile{p.handCount > 1 ? 's' : ''}</span></span>
+                            <span className="name" title={p.name}>{p.name}</span>{' '}
+                            <span className="tally"><span className="pts"><strong data-testid={`score-${p.id}`}>{p.score}</strong> pt</span> · <span className="count">{p.handCount} tuile{p.handCount > 1 ? 's' : ''}</span></span>
                         </li>
                     ))}
                 </ul>

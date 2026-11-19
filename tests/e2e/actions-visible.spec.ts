@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { board } from './helpers';
+import { board, myTurn, newNamedGame, playByHint } from './helpers';
 
 // Position morte en 390 × 844 : les actions du tour tiennent dans l'écran sans défilement, et les deux boutons
 // de zoom restent ensemble (aucune commande isolée sur sa ligne).
@@ -24,3 +24,35 @@ test('turn actions stay on screen without scrolling at 390 by 844', async ({ pag
     expect(together, `+ en ${plus!.x},${plus!.y} ; − en ${minus!.x},${minus!.y}`).toBe(true);
     expect(Math.hypot(plus!.x - minus!.x, plus!.y - minus!.y)).toBeLessThan(70);
 });
+
+// Quatre joueurs aux noms longs, après un tour de table (l'échange est alors offert) : les cartes de score restent
+// compactes et les actions du tour tiennent dans l'écran ; le score et le nombre de tuiles ne sont jamais tronqués.
+for (const [w, h] of [[390, 844], [360, 740]] as const) {
+    test(`turn actions stay on screen with four long names at ${w} by ${h}`, async ({ page }) => {
+        test.setTimeout(90_000);
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto('./?seed=quatre-longs');
+        await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif !important}' });
+        await newNamedGame(page, [
+            { name: 'Joueuse au long nom', kind: 'human' }, { name: 'Ordinateur numéro 2', kind: 'beginner' },
+            { name: 'Ordinateur numéro 3', kind: 'intermediate' }, { name: 'Ordinateur numéro 4', kind: 'beginner' }
+        ]);
+        await myTurn(page);
+        await playByHint(page);
+        await myTurn(page);
+        await page.evaluate(() => { window.scrollTo(0, 0); });
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+        const names = ['Valider', 'Échanger'];
+        if (await page.getByRole('button', { name: 'Passer', exact: true }).count()) names.push('Passer');
+        for (const name of names) {
+            const box = await page.getByRole('button', { name, exact: true }).boundingBox();
+            expect(box, name).not.toBeNull();
+            expect(box!.y + box!.height, `${name} sous le pli (${Math.round(box!.y + box!.height)} > ${h})`).toBeLessThanOrEqual(h);
+        }
+        // Score et tuiles entiers : leur boîte n'est pas plus étroite que leur contenu.
+        const cut = await page.locator('.players .tally').evaluateAll(els => els.filter(e => e.scrollWidth > e.clientWidth + 0.5 || e.getBoundingClientRect().right > (e.closest('li')?.getBoundingClientRect().right ?? Infinity)).map(e => e.textContent));
+        expect(cut).toEqual([]);
+        // Le nom complet reste dans le nom accessible de la liste des scores.
+        await expect(page.getByRole('list', { name: 'Scores' })).toContainText('Ordinateur numéro 3');
+    });
+}
