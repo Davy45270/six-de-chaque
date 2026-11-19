@@ -31,18 +31,19 @@ button.link { border: none; background: none; text-decoration: underline; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .play { display: grid; grid-template-columns: 1fr; gap: 8px; padding-top: 8px; }
 .status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-/* Cartes de score compactes : deux colonnes sur téléphone, nom sur une ligne (coupé par une ellipse, complet pour
-   les lecteurs d'écran et dans l'infobulle), score et tuiles jamais coupés (ils passent à la ligne au besoin). */
+/* Cartes de score compactes : deux colonnes sur téléphone, nom sur deux lignes au plus (la fin, souvent ce qui
+   distingue deux joueurs, reste visible ; au-delà, ellipse, et nom complet pour les lecteurs d'écran et dans
+   l'infobulle), score et tuiles jamais coupés (ils passent à la ligne au besoin). */
 .players { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 6px; margin: 0; padding: 0; flex: 1 1 18rem; font-size: 0.875rem; }
 .players li { min-width: 0; background: var(--papier); border: 2px solid var(--trait); border-radius: 14px; padding: 3px 12px; line-height: 1.25; }
 .players li.current { border-color: var(--encre); box-shadow: 0 0 0 2px var(--encre); }
-.players .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.players .name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .players .tally { display: block; }
 .players .pts, .players .count { white-space: nowrap; }
 .players .count { color: var(--encre-douce); }
 .bag { margin: 0 0 0 auto; }
 .turn { margin: 0; font-weight: 600; }
-.board { position: relative; width: 100%; height: clamp(220px, calc(100dvh - 440px), 46dvh); border-radius: 16px; overflow: hidden; border: 2px solid var(--trait); background: var(--sable); }
+.board { position: relative; width: 100%; height: clamp(220px, calc(100dvh - 480px), 46dvh); border-radius: 16px; overflow: hidden; border: 2px solid var(--trait); background: var(--sable); }
 .board canvas { display: block; }
 /* Zoom posé dans le coin du plateau : les deux boutons restent ensemble, hors de la rangée d'actions. */
 .board-wrap { position: relative; }
