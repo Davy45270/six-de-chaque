@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { cellKey } from '@six-de-chaque/engine';
 import type { GameEvent, PublicGameState, Tile } from '@six-de-chaque/engine';
 import { Board, TileImage, tileLabel } from '../components';
@@ -14,12 +15,14 @@ const endsTurn = (c: UiCommand): boolean => c.t === 'validate' || c.t === 'pass'
 
 export interface PlayProps {
     ui: UiState; view: PublicGameState; viewerHand: string[] | null; highContrast: boolean; colourBlind: boolean; announce: string; zoom: { n: number; factor: number };
+    saving?: boolean; saveAlert?: ReactNode;
     challenge?: { title: string; turnLimit: number; targetScore: number };
     dispatch(c: UiCommand): void; onMenu(): void;
 }
-export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce, zoom, dispatch, onMenu, challenge }: PlayProps) {
+export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce, zoom, dispatch, onMenu, challenge, saving = false, saveAlert }: PlayProps) {
     const me = currentPlayer(ui);
     const myTurn = me?.type === 'human' && ui.handoverFor === null && !ui.aiThinking && view.phase !== 'finished';
+    const canAct = myTurn && !saving;
     const tiles = view.tilesById;
     const canPass = !challenge && myTurn && passLegal(ui.session);
     const canExchange = !challenge && myTurn && view.phase !== 'opening' && view.bagCount > 0;
@@ -46,7 +49,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
     }, [myTurn, canPass, ui]);
     useEffect(() => {
         const onKey = (e: KeyboardEvent): void => {
-            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (saving || e.ctrlKey || e.metaKey || e.altKey) return;
             const target = e.target as HTMLElement | null;
             if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
             if (e.key === 'Enter' && target?.tagName === 'BUTTON') return;
@@ -61,7 +64,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
         };
         window.addEventListener('keydown', onKey);
         return () => { window.removeEventListener('keydown', onKey); };
-    }, [ui, dispatch, endTurn, refusal]);
+    }, [ui, dispatch, endTurn, refusal, saving]);
     const left = new Set(myTurn ? handLeft(ui) : viewerHand ?? []);
     const history: GameEvent[] = ui.session.events.slice(-12).reverse();
     const shown = (viewerHand ?? []).map(id => tiles[id]).filter((t): t is Tile => t !== undefined);
@@ -77,8 +80,10 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                     ))}
                 </ul>
                 <p className="bag" data-testid="bag">Réserve : {view.bagCount}</p>
-                <button type="button" className="menu-button" onClick={onMenu}>Menu</button>
+                <button type="button" className="menu-button" disabled={saving} onClick={onMenu}>Menu</button>
             </header>
+            {saveAlert}
+            {saving && <p role="status">Sauvegarde du tour…</p>}
             <div className="turn">
                 {challenge && <><h1>{challenge.title}</h1><p>Tour {view.turnNumber + 1} / {challenge.turnLimit} · Objectif : score ≥ {challenge.targetScore}</p></>}
                 <p data-testid="turn">{turnLabel({ name: me?.name, myTurn, aiThinking: ui.aiThinking })}</p>
@@ -99,7 +104,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                         const placed = !left.has(t.id);
                         const pressed = ui.mode === 'exchange' ? ui.exchangeSel.includes(t.id) : ui.selected === t.id;
                         return (
-                            <button key={t.id} type="button" className={`tile${pressed ? ' selected' : ''}${placed ? ' placed' : ''}`} disabled={!myTurn || (placed && ui.mode === 'place')}
+                            <button key={t.id} type="button" className={`tile${pressed ? ' selected' : ''}${placed ? ' placed' : ''}`} disabled={!canAct || (placed && ui.mode === 'place')}
                                 aria-pressed={pressed} aria-label={`${i + 1} : ${tileLabel(t)}${placed ? ', posée' : ''}`} data-tile={t.id}
                                 onClick={() => { dispatch(ui.mode === 'exchange' ? { t: 'toggleExchangeTile', tileId: t.id } : { t: 'select', tileId: t.id }); }}>
                                 <TileImage tile={t} highContrast={highContrast} colourBlind={colourBlind} />
@@ -118,15 +123,15 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                 </p>}
                 <div className="controls">
                     {ui.mode === 'place' ? <>
-                        <button type="button" className="primary" disabled={!myTurn || !ui.preview} onClick={() => { endTurn({ t: 'validate' }); }}>Valider</button>
-                        <button type="button" disabled={!myTurn || ui.ghost.length === 0} onClick={() => { dispatch({ t: 'undoGhost' }); }}>Retirer</button>
-                        <button type="button" disabled={!myTurn || ui.ghost.length === 0} onClick={() => { dispatch({ t: 'clearGhost' }); }}>Annuler</button>
-                        {canExchange && <button type="button" onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Échanger</button>}
-                        {canPass && <button type="button" onClick={() => { endTurn({ t: 'pass' }); }}>Passer</button>}
-                        {!challenge && <button type="button" disabled={!myTurn} onClick={() => { dispatch({ t: 'hint' }); }}>Indice</button>}
+                        <button type="button" className="primary" disabled={!canAct || !ui.preview} onClick={() => { endTurn({ t: 'validate' }); }}>Valider</button>
+                        <button type="button" disabled={!canAct || ui.ghost.length === 0} onClick={() => { dispatch({ t: 'undoGhost' }); }}>Retirer</button>
+                        <button type="button" disabled={!canAct || ui.ghost.length === 0} onClick={() => { dispatch({ t: 'clearGhost' }); }}>Annuler</button>
+                        {canExchange && <button type="button" disabled={saving} onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Échanger</button>}
+                        {canPass && <button type="button" disabled={saving} onClick={() => { endTurn({ t: 'pass' }); }}>Passer</button>}
+                        {!challenge && <button type="button" disabled={!canAct} onClick={() => { dispatch({ t: 'hint' }); }}>Indice</button>}
                     </> : <>
-                        <button type="button" className="primary" disabled={ui.exchangeSel.length === 0} onClick={() => { endTurn({ t: 'confirmExchange' }); }}>Confirmer l’échange</button>
-                        <button type="button" onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Retour à la pose</button>
+                        <button type="button" className="primary" disabled={saving || ui.exchangeSel.length === 0} onClick={() => { endTurn({ t: 'confirmExchange' }); }}>Confirmer l’échange</button>
+                        <button type="button" disabled={saving} onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Retour à la pose</button>
                     </>}
                 </div>
                 {!challenge && <><h2 className="history-title">Derniers coups</h2>

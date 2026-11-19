@@ -43,6 +43,10 @@ export function App({ example }: { example?: OpenExample }) {
     const [resume, setResume] = useState<SavedResume | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [announce, setAnnounce] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [saveFailed, setSaveFailed] = useState(false);
+    const savingTurn = useRef(false);
+    const incompleteJournal = useRef(false);
     const [zoom, setZoom] = useState({ n: 0, factor: 1 });
     const client = useRef<AiClient | null>(null);
     const uiRef = useRef<UiState | null>(null);
@@ -86,29 +90,43 @@ export function App({ example }: { example?: OpenExample }) {
         const next = initialUi(session, config, gameId);
         setUi(next);
         setAnnounce('');
+        setSaveFailed(false);
+        incompleteJournal.current = false;
         setScreen(session.state.phase === 'finished' ? 'end' : 'play');
         if (session.state.phase !== 'finished') withDb(d => setSetting(d, 'lastGameId', gameId));
     }, [withDb]);
 
-    const apply = useCallback((action: GameAction) => {
+    const apply = useCallback(async (action: GameAction) => {
         const cur = uiRef.current;
-        if (!cur) return;
+        if (!cur || savingTurn.current) return;
         const { session, result } = submit(cur.session, action);
         if (!result.ok) { setUi({ ...cur, previewError: result.error.detail, aiThinking: false }); return; }
-        const next = withSession({ ...cur, cursor: cur.cursor }, session);
-        setUi(next);
+        if (cur.gameId !== exampleId) {
+            savingTurn.current = true;
+            setSaving(true);
+            try {
+                await saveTurn(await dbReady, cur.gameId, session, cur.config, incompleteJournal.current);
+                incompleteJournal.current = false;
+            } catch {
+                incompleteJournal.current = true;
+            }
+            savingTurn.current = false;
+            setSaving(false);
+            setSaveFailed(incompleteJournal.current);
+        }
+        setUi(withSession(cur, session));
         setAnnounce(describeEvent(result.event, cur.config, session.state.tilesById));
-        if (cur.gameId !== exampleId) withDb(d => saveTurn(d, cur.gameId, session, cur.config));
         if (session.state.phase === 'finished') {
             setResume(saved => saved?.id === cur.gameId ? null : saved);
             setScreen('end');
         }
-    }, [withDb, exampleId]);
+    }, [dbReady, exampleId]);
 
     const dispatch = useCallback((c: UiCommand) => {
         const cur = uiRef.current;
         if (!cur) return;
         if (c.t === 'zoom') { setZoom(z => ({ n: z.n + 1, factor: c.factor })); return; }
+        if (savingTurn.current) return;
         if (c.t === 'hint') {
             const me = currentPlayer(cur);
             if (!me || me.type !== 'human' || !client.current) return;
@@ -128,7 +146,7 @@ export function App({ example }: { example?: OpenExample }) {
         if (c.t !== 'moveCursor') hintRevision.current++;
         const { state, submit: action } = reduce(cur, c);
         setUi(state);
-        if (action) apply(action);
+        if (action) void apply(action);
     }, [apply]);
 
     const turnSession = ui?.session;
@@ -146,7 +164,8 @@ export function App({ example }: { example?: OpenExample }) {
         setThinking(true);
         const timer = setTimeout(() => {
             void chooseAiMove(turnSession, client.current, isCurrent).then(move => {
-                if (move && isCurrent()) apply(move);
+                if (move && isCurrent()) return apply(move);
+                return undefined;
             }).finally(() => {
                 if (isCurrent()) setThinking(false);
             });
@@ -203,25 +222,28 @@ export function App({ example }: { example?: OpenExample }) {
         else withDb(d => exportGame(d, ui.gameId).then(download));
     };
 
+    const saveMessage = saveFailed ? 'Le dernier tour n’a pas pu être sauvegardé.' : null;
+    const saveAlert = saveMessage && <p className="error" role="alert">{saveMessage}</p>;
     if (screen === 'challenges') return <Challenges completed={completed} highContrast={highContrast} colourBlind={colourBlind}
         onComplete={markComplete} onHome={() => { setScreen('home'); }} />;
     if (screen === 'setup') return <Setup onStart={startNew} onBack={() => { setScreen('home'); }} />;
     if (screen === 'about') return <About onBack={() => { setScreen('home'); }} />;
-    if (screen === 'end' && ui) return <End state={ui.session.state} config={ui.config} onReplay={() => { setScreen('replay'); }} onExport={doExport} onNew={() => { setScreen('setup'); }} onHome={() => { setScreen('home'); }} />;
+    if (screen === 'end' && ui) return <End saveAlert={saveAlert} state={ui.session.state} config={ui.config} onReplay={() => { setScreen('replay'); }} onExport={doExport} onNew={() => { setScreen('setup'); }} onHome={() => { setScreen('home'); }} />;
     if (screen === 'replay' && ui && ui.session.state.phase === 'finished') return <Replay config={ui.config} seed={ui.session.state.seed} events={ui.session.events} highContrast={highContrast} colourBlind={colourBlind} onBack={() => { setScreen('end'); }} />;
     if (screen === 'play' && ui && view) {
         if (ui.handoverFor) {
             const name = ui.config.players.find(p => p.id === ui.handoverFor)?.name ?? '';
-            return <Handover name={name} onReady={() => { dispatch({ t: 'handoverDone' }); }} />;
+            return <Handover saveAlert={saveAlert} name={name} onReady={() => { dispatch({ t: 'handoverDone' }); }} />;
         }
-        return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} colourBlind={colourBlind} announce={announce} zoom={zoom} dispatch={dispatch} onMenu={() => {
+        return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} colourBlind={colourBlind} announce={announce} zoom={zoom} dispatch={dispatch} saving={saving} saveAlert={saveAlert} onMenu={() => {
+            if (savingTurn.current) return;
             hintRevision.current++;
             if (currentPlayer(ui)?.type === 'human') client.current?.cancel();
             setScreen('home');
         }} />;
     }
     const offer = resumeOffer(standardUi, resume);
-    return <Home canResume={Boolean(offer)} resumeNote={offer?.source === 'saved' ? offer.save.note : null} highContrast={highContrast} colourBlind={colourBlind} message={message}
+    return <Home canResume={Boolean(offer)} resumeNote={offer?.source === 'saved' ? offer.save.note : null} highContrast={highContrast} colourBlind={colourBlind} message={saveMessage ?? message}
         onNew={() => { setScreen('setup'); }}
         onChallenges={() => { setScreen('challenges'); }}
         onResume={() => {

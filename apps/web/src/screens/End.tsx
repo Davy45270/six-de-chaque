@@ -1,14 +1,16 @@
+import type { ReactNode } from 'react';
 import { winners } from '@six-de-chaque/engine';
 import type { GameConfig, GameState } from '@six-de-chaque/engine';
 import { winnerLabel } from '../game/labels';
 
-export function End({ state, config, onReplay, onExport, onNew, onHome }: { state: GameState; config: GameConfig; onReplay(): void; onExport(): void; onNew(): void; onHome(): void }) {
+export function End({ saveAlert, state, config, onReplay, onExport, onNew, onHome }: { saveAlert?: ReactNode; state: GameState; config: GameConfig; onReplay(): void; onExport(): void; onNew(): void; onHome(): void }) {
     const top = winners(state);
     const names = top.map(id => config.players.find(p => p.id === id)?.name ?? id);
     const ranking = [...state.players].sort((a, b) => b.score - a.score);
     return (
         <main className="screen end">
             <h1>Partie terminée</h1>
+            {saveAlert}
             <p className="reason">{state.endReason === 'out' ? 'Une main a été vidée alors que la réserve était vide : +6 points.' : 'Plus personne ne pouvait poser : la partie s’arrête, sans bonus.'}</p>
             <p className="winner" data-testid="winner">{winnerLabel(names)}</p>
             <ol className="ranking">

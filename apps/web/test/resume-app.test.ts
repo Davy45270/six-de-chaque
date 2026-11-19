@@ -191,6 +191,100 @@ it('an incoherent save with a broken journal stays untouched and cannot be resum
     }
 });
 
+it.each([
+    { name: 'a validated turn is saved before it is shown', fails: false },
+    { name: 'a failed turn write is reported and the next save includes the missing event', fails: true }
+])('$name', async ({ fails }) => {
+    const config: GameConfig = { players: [
+        { id: 'alice', name: 'Alice', type: 'human' },
+        { id: 'bob', name: 'Bob', type: 'human' }
+    ] };
+    const session = playGame(config, 'écriture-avant-affichage', { maxTurns: 0 });
+    const action = nextAction(session);
+    if (action.type !== 'PLACE') throw new Error('Pose attendue');
+    const db = await openDb();
+    let releaseWrite!: () => void;
+    const writeGate = new Promise<void>(resolve => { releaseWrite = resolve; });
+    const saveTurn = storage.saveTurn;
+    const save = vi.spyOn(storage, 'saveTurn').mockImplementationOnce(async (...args) => {
+        await writeGate;
+        if (fails) throw new Error('Écriture impossible');
+        await saveTurn(...args);
+    });
+    const load = vi.spyOn(storage, 'loadGame');
+    const waitForLoad = async (count: number) => {
+        await act(async () => {
+            await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(count));
+            await load.mock.results[count - 1]?.value;
+        });
+    };
+    try {
+        await saveAll(db, gameId, session, config);
+        await setSetting(db, 'lastGameId', gameId);
+        mount();
+        await waitForLoad(1);
+        clickButton('Reprendre la partie');
+        const heading = (name: string | undefined) => `Passe l’appareil à ${name}`;
+        const player = session.state.players[session.state.currentPlayerIndex];
+        await waitForLoad(2);
+        expect(host.querySelector('h1')?.textContent).toBe(heading(player?.name));
+        clickButton(`C’est moi, ${player?.name}`);
+        const place = (move: typeof action) => {
+            for (const { tileId, x, y } of move.placements) {
+                const tile = host.querySelector<HTMLButtonElement>(`button[data-tile="${tileId}"]`);
+                if (!tile || !board.onTap) throw new Error('Galet et plateau attendus');
+                act(() => { tile.click(); });
+                act(() => { board.onTap?.(x, y); });
+            }
+            clickButton('Valider');
+        };
+        place(action);
+        await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+        const next = session.state.players.find(p => p.id !== player?.id);
+        expect.soft(host.querySelector('h1')?.textContent).not.toBe(heading(next?.name));
+        expect.soft(host.querySelector('[data-testid="announce"]')?.textContent).toBe('');
+        expect((await loadGame(db, gameId)).session.state.turnNumber).toBe(0);
+
+        await act(async () => {
+            releaseWrite();
+            await Promise.allSettled([save.mock.results[0]?.value]);
+        });
+        expect(host.querySelector('h1')?.textContent).toBe(heading(next?.name));
+        if (fails) {
+            expect(host.querySelector('[role="alert"]')?.textContent).toBe('Le dernier tour n’a pas pu être sauvegardé.');
+            expect((await loadGame(db, gameId)).session.state.turnNumber).toBe(0);
+            const unsaved = save.mock.calls[0]?.[2];
+            if (!unsaved) throw new Error('Tour en mémoire attendu');
+            const move = nextAction(unsaved);
+            if (move.type !== 'PLACE') throw new Error('Pose attendue');
+            clickButton(`C’est moi, ${next?.name}`);
+            place(move);
+            await act(async () => {
+                await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+                await save.mock.results[1]?.value;
+            });
+            expect(host.querySelector('[role="alert"]')).toBeNull();
+            expect(await loadGame(db, gameId)).toMatchObject({
+                consistent: true, session: { state: { turnNumber: 2 }, events: save.mock.calls[1]?.[2].events }
+            });
+            return;
+        }
+        act(() => { root.unmount(); });
+        root = createRoot(host);
+        mount();
+        await waitForLoad(3);
+        clickButton('Reprendre la partie');
+        await waitForLoad(4);
+        expect(host.querySelector('h1')?.textContent).toBe(heading(next?.name));
+        clickButton(`C’est moi, ${next?.name}`);
+        expect(host.querySelectorAll('[data-testid="history"] li')).toHaveLength(1);
+        expect((await loadGame(db, gameId)).session.state.turnNumber).toBe(1);
+    } finally {
+        releaseWrite();
+        db.close();
+    }
+});
+
 it('after a game ends and the app reloads, no resumption is offered', async () => {
     const config: GameConfig = { players: [
         { id: 'alice', name: 'Alice', type: 'human' },
@@ -231,10 +325,12 @@ it('after a game ends and the app reloads, no resumption is offered', async () =
             }
             clickButton('Valider');
         }
-        expect(host.querySelector('h1')?.textContent).toBe('Partie terminée');
-        await vi.waitFor(async () => {
-            expect(await getSetting(db, 'lastGameId')).toBeUndefined();
+        await act(async () => {
+            await vi.waitFor(async () => {
+                expect(await getSetting(db, 'lastGameId')).toBeUndefined();
+            });
         });
+        expect(host.querySelector('h1')?.textContent).toBe('Partie terminée');
         expect(await loadGame(db, gameId)).toMatchObject({ session: { state: finished.state }, consistent: true });
 
         act(() => { root.unmount(); });

@@ -13,7 +13,6 @@ export const DB_NAME = 'six-de-chaque';
 const req = <T>(r: IDBRequest<T>): Promise<T> => new Promise((resolve, reject) => { r.onsuccess = () => { resolve(r.result); }; r.onerror = () => { reject(r.error ?? new Error('IndexedDB')); }; });
 const done = (tx: IDBTransaction): Promise<void> => new Promise((resolve, reject) => {
     tx.oncomplete = () => { resolve(); };
-    tx.onerror = () => { reject(tx.error ?? new Error('transaction')); };
     tx.onabort = () => { reject(tx.error ?? new Error('transaction annulée')); };
 });
 
@@ -34,12 +33,15 @@ export function openDb(name = DB_NAME): Promise<IDBDatabase> {
 const record = (gameId: string, session: Session, config: GameConfig): SavedGame =>
     ({ id: gameId, config: checkedConfig(config, CURRENT_VERSION), snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
 
-export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig): Promise<void> {
+export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, repairJournal = false): Promise<void> {
     const finished = session.state.phase === 'finished';
     const tx = db.transaction(finished ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
     tx.objectStore('games').put(record(gameId, session, config));
-    const last = session.events[session.events.length - 1];
-    if (last) tx.objectStore('events').put({ ...last, gameId } satisfies StoredEvent);
+    const journal = tx.objectStore('events');
+    // Après une transaction échouée, réécrire aussi les événements manquants.
+    for (const event of repairJournal ? session.events : session.events.slice(-1)) {
+        journal.put({ ...event, gameId } satisfies StoredEvent);
+    }
     if (finished) {
         const settings = tx.objectStore('settings');
         const lastGameId = settings.get('lastGameId') as IDBRequest<string | undefined>;
