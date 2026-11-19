@@ -6,6 +6,8 @@ export default defineConfig({
         pool: 'threads',
         maxWorkers: 2,
         testTimeout: 30_000,
+        // Titres `it.each` ($name) complets dans les rapports : par défaut, vitest les coupe à 40 caractères.
+        taskTitleValueFormatTruncate: 0,
         // Seuil de la spec : 95 % des branches sur les règles et le score du moteur.
         coverage: {
             provider: 'v8',
