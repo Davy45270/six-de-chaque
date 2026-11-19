@@ -20,11 +20,11 @@ test('board rendering frame rate is measured', async ({ page, browserName }, tes
     const t0 = await page.evaluate(() => performance.now());
     await page.mouse.move(cx, cy);
     await page.mouse.down();
-    // 40 pas de 50 ms : un glisser continu de 2 s, en aller-retour.
-    for (let i = 1; i <= 40; i++) {
-        const a = (i / 40) * Math.PI * 2;
+    // Glisser continu de 2 s d'horloge, en boucle : la durée ne dépend pas de la vitesse de chaque déplacement.
+    const start = Date.now();
+    while (Date.now() - start < 2000) {
+        const a = ((Date.now() - start) / 2000) * Math.PI * 2;
         await page.mouse.move(cx + Math.sin(a) * box.width * 0.3, cy + Math.sin(a * 2) * box.height * 0.2);
-        await page.waitForTimeout(50);
     }
     await page.mouse.up();
     const { frames, ms } = await page.evaluate(t => {

@@ -169,6 +169,8 @@ test('every interactive target is at least 44 by 44 px', async ({ page }) => {
                 const r = target.getBoundingClientRect();
                 const cs = getComputedStyle(el);
                 if (r.width === 0 || r.height === 0 || cs.visibility !== 'visible' || el.closest('[hidden]')) continue;
+                // Hors de la page (crochet d'accessibilité tactile de PixiJS, posé à -1000 px) : personne ne peut le toucher.
+                if (r.right + window.scrollX <= 0 || r.bottom + window.scrollY <= 0) continue;
                 out.push({ what: `${el.tagName.toLowerCase()} « ${el.textContent.trim().slice(0, 30) || el.getAttribute('aria-label') || ''} »`, w: r.width, h: r.height });
             }
             return out;

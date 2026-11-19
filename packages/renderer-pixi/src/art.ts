@@ -1,6 +1,6 @@
 // Art original (CC BY 4.0, David Sevin) : six glyphes dessinés pour le jeu sur une grille 24 × 24, un galet clair
 // aux coins très arrondis, un motif de fond par couleur. Décrit une fois, servi au plateau PixiJS et au DOM.
-import { COLOR_NAMES, COLORS, COLORS_HIGH_CONTRAST, INK, TILE_BG, TILE_BG_HIGH_CONTRAST } from './palette';
+import { COLOR_INITIALS, COLORS, COLORS_HIGH_CONTRAST, INK, TILE_BG, TILE_BG_HIGH_CONTRAST } from './palette';
 
 export interface Glyph { id: string; d: string; stroke?: boolean }
 export const GLYPHS: readonly Glyph[] = [
@@ -36,10 +36,12 @@ export function tileSvg(color: number, shape: number, opts: TileAppearance & { p
     const fillPattern = defs ? `<rect x="3" y="3" width="58" height="58" rx="17.5" fill="url(#m)" opacity="${opts.highContrast ? 0.35 : 0.45}"/>` : '';
     const ring = color === 4 ? `<rect x="8" y="8" width="48" height="48" rx="13" fill="none" stroke="${c}" stroke-width="3" opacity="0.5"/>` : '';
     const solid = color === 0 ? `<rect x="3" y="3" width="58" height="58" rx="17.5" fill="${c}" opacity="0.18"/>` : '';
+    // Contour d'encre visible d'au moins 2 unités sur 64 après mise à l'échelle : c'est lui qui porte le contraste
+    // des couleurs claires (jaune, ciel, orange) sur le galet crème, dans toutes les apparences.
     const glyph = g.stroke
-        ? `<path d="${g.d}" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><path d="${g.d}" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>`
-        : `<path d="${g.d}" fill="${c}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>`;
-    const initial = opts.colourBlind ? COLOR_NAMES[color]?.[0]?.toUpperCase() : undefined;
+        ? `<path d="${g.d}" fill="none" stroke="${INK}" stroke-width="5.2" stroke-linecap="round"/><path d="${g.d}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>`
+        : `<path d="${g.d}" fill="${c}" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    const initial = opts.colourBlind ? COLOR_INITIALS[color] : undefined;
     const letter = initial
         ? `<rect x="23" y="43" width="18" height="17" rx="5" fill="${bg}"/><text x="32" y="57" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="${INK}">${initial}</text>`
         : '';

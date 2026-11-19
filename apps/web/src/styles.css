@@ -10,9 +10,10 @@ body { min-height: 100dvh; }
 h1 { font-size: 1.6rem; margin: 0.4rem 0 0.8rem; }
 h2 { font-size: 1.1rem; margin: 1rem 0 0.4rem; }
 button, select, input { font: inherit; color: var(--encre); }
-button { background: var(--papier); border: 2px solid var(--trait); border-radius: 999px; padding: 0.55rem 1rem; min-height: 44px; cursor: pointer; }
+button { background: var(--papier); border: 2px solid var(--trait); border-radius: 999px; padding: 0.55rem 1rem; min-height: 44px; min-width: 44px; cursor: pointer; }
 button.primary { background: var(--accent); color: #FFFFFF; border-color: var(--accent); font-weight: 600; }
-button:disabled { opacity: 0.45; cursor: default; }
+/* Désactivé : texte lisible (encre douce sur papier), bordure pointillée et fond transparent comme signes non colorés. */
+button:disabled, button.primary:disabled { background: transparent; color: var(--encre-douce); border: 2px dashed var(--encre-douce); font-weight: 400; cursor: default; }
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--encre); outline-offset: 2px; }
 button.link { border: none; background: none; text-decoration: underline; }
 .screen { max-width: 1100px; margin: 0 auto; padding: 12px 16px 24px; }
@@ -33,12 +34,16 @@ button.link { border: none; background: none; text-decoration: underline; }
 .players { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; flex-wrap: wrap; flex: 1; }
 .players li { background: var(--papier); border: 2px solid var(--trait); border-radius: 999px; padding: 4px 10px; }
 .players li.current { border-color: var(--encre); box-shadow: 0 0 0 2px var(--encre) inset; }
-.players .count { color: var(--encre-douce); margin-left: 4px; }
+.players .tally { white-space: nowrap; }
+.players .count { color: var(--encre-douce); }
 .bag { margin: 0; }
-.menu-button { padding: 0.3rem 0.8rem; min-height: 40px; }
 .turn { margin: 0; font-weight: 600; }
 .board { position: relative; width: 100%; height: 46dvh; min-height: 260px; border-radius: 16px; overflow: hidden; border: 2px solid var(--trait); background: var(--sable); }
 .board canvas { display: block; }
+/* Zoom posé dans le coin du plateau : les deux boutons restent ensemble, hors de la rangée d'actions. */
+.board-wrap { position: relative; }
+.zoom { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.zoom button { padding: 0; width: 44px; font-weight: 700; }
 .panel { display: flex; flex-direction: column; gap: 8px; }
 .cursor { margin: 0; color: var(--encre-douce); font-size: 0.9rem; }
 .hand { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
@@ -57,7 +62,7 @@ button.link { border: none; background: none; text-decoration: underline; }
 .replay .board { height: 50dvh; }
 @media (min-width: 900px) {
     .play { grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "status status" "turn turn" "board panel"; align-items: start; }
-    .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board { grid-area: board; height: calc(100dvh - 140px); } .play .panel { grid-area: panel; }
+    .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board-wrap { grid-area: board; } .play .board { height: calc(100dvh - 140px); } .play .panel { grid-area: panel; }
 }
 .challenges { max-width: 560px; }
 .challenge-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; list-style: none; }

@@ -7,6 +7,7 @@ import type { UiCommand, UiState } from '../game/controller';
 import { keyToCommand } from '../game/keyboard';
 import { describeEvent } from '../game/describe';
 import { turnLabel } from '../game/turn-label';
+import { exchangeLabel } from '../game/labels';
 
 export interface PlayProps {
     ui: UiState; view: PublicGameState; viewerHand: string[] | null; highContrast: boolean; colourBlind: boolean; announce: string; zoom: { n: number; factor: number };
@@ -46,8 +47,8 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                 <ul className="players" aria-label="Scores">
                     {view.players.map((p, i) => (
                         <li key={p.id} className={i === view.currentPlayerIndex ? 'current' : ''} aria-current={i === view.currentPlayerIndex ? 'true' : undefined}>
-                            <span className="name">{p.name}</span> <strong data-testid={`score-${p.id}`}>{p.score}</strong>
-                            <span className="count" aria-label={`${p.handCount} tuiles en main`}>·{p.handCount}</span>
+                            <span className="name">{p.name}</span>{' '}
+                            <span className="tally"><strong data-testid={`score-${p.id}`}>{p.score}</strong> pt · <span className="count">{p.handCount} tuile{p.handCount > 1 ? 's' : ''}</span></span>
                         </li>
                     ))}
                 </ul>
@@ -58,8 +59,14 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                 {challenge && <><h1>{challenge.title}</h1><p>Tour {view.turnNumber + 1} / {challenge.turnLimit} · Objectif : score ≥ {challenge.targetScore}</p></>}
                 <p data-testid="turn">{turnLabel({ name: me?.name, myTurn, aiThinking: ui.aiThinking })}</p>
             </div>
-            <Board board={view.board} ghost={ui.ghost} cursor={myTurn ? ui.cursor : null} tiles={tiles} highContrast={highContrast} colourBlind={colourBlind} zoom={zoom}
-                onTap={(x, y) => { dispatch({ t: 'placeAt', x, y }); }} label={`Plateau, ${Object.keys(view.board).length} tuiles posées. ${myTurn ? `Case du curseur ${ui.cursor.x}, ${ui.cursor.y}, ${cursorContent}.` : ''}`} />
+            <div className="board-wrap">
+                <Board board={view.board} ghost={ui.ghost} cursor={myTurn ? ui.cursor : null} tiles={tiles} highContrast={highContrast} colourBlind={colourBlind} zoom={zoom}
+                    onTap={(x, y) => { dispatch({ t: 'placeAt', x, y }); }} label={`Plateau, ${Object.keys(view.board).length} tuiles posées. ${myTurn ? `Case du curseur ${ui.cursor.x}, ${ui.cursor.y}, ${cursorContent}.` : ''}`} />
+                <div className="zoom" role="group" aria-label="Zoom du plateau">
+                    <button type="button" aria-label="Zoomer" onClick={() => { dispatch({ t: 'zoom', factor: 1.2 }); }}>+</button>
+                    <button type="button" aria-label="Dézoomer" onClick={() => { dispatch({ t: 'zoom', factor: 1 / 1.2 }); }}>−</button>
+                </div>
+            </div>
             <section className="panel">
                 <p className="cursor" data-testid="cursor">Case {ui.cursor.x}, {ui.cursor.y}</p>
                 <p className="sr-only" aria-live="polite">{myTurn ? `Case ${ui.cursor.x}, ${ui.cursor.y}, ${cursorContent}` : ''}</p>
@@ -78,7 +85,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                     {shown.length === 0 && <p className="hidden-hand">Main cachée</p>}
                 </div>
                 <p className="preview" data-testid="preview">
-                    {ui.previewError ? <span className="error">{ui.previewError}</span> : ui.preview ? `Coup prévu : ${ui.preview.total} point${ui.preview.total > 1 ? 's' : ''}${ui.preview.finalBonus ? `, dont ${ui.preview.finalBonus} pour finir` : ''}` : ui.mode === 'exchange' ? `Échange : ${ui.exchangeSel.length} tuile(s) choisie(s)` : ' '}
+                    {ui.previewError ? <span className="error">{ui.previewError}</span> : ui.preview ? `Coup prévu : ${ui.preview.total} point${ui.preview.total > 1 ? 's' : ''}${ui.preview.finalBonus ? `, dont ${ui.preview.finalBonus} pour finir` : ''}` : ui.mode === 'exchange' ? exchangeLabel(ui.exchangeSel.length) : ' '}
                 </p>
                 {dead && ui.mode === 'place' && <p className="dead" role="status" data-testid="dead-position">
                     Plus aucune tuile du jeu ne peut être posée. Passe, ou échange les tuiles de ton choix (une, plusieurs ou toutes).
@@ -95,8 +102,6 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                         <button type="button" className="primary" disabled={ui.exchangeSel.length === 0} onClick={() => { dispatch({ t: 'confirmExchange' }); }}>Confirmer l’échange</button>
                         <button type="button" onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Retour à la pose</button>
                     </>}
-                    <button type="button" aria-label="Zoomer" onClick={() => { dispatch({ t: 'zoom', factor: 1.2 }); }}>+</button>
-                    <button type="button" aria-label="Dézoomer" onClick={() => { dispatch({ t: 'zoom', factor: 1 / 1.2 }); }}>−</button>
                 </div>
                 {!challenge && <><h2 className="history-title">Derniers coups</h2>
                 <ol className="history" data-testid="history">

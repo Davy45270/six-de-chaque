@@ -5,6 +5,8 @@ export const COLORS_HIGH_CONTRAST: typeof COLORS = ['#8A4B00', '#005A8C', '#0066
 export const PATTERNS = ['plein', 'raye', 'pointille', 'quadrille', 'anneau', 'chevron'] as const;
 export const COLOR_NAMES = ['orange', 'ciel', 'vert', 'jaune', 'bleu', 'vermillon'] as const;
 export const PATTERN_NAMES = ['plein', 'rayé', 'pointillé', 'quadrillé', 'anneau', 'chevron'] as const;
+/** Initiale du mode daltonien, une par couleur : vermillon prend R (rouge) pour ne pas doubler le V de vert. */
+export const COLOR_INITIALS = ['O', 'C', 'V', 'J', 'B', 'R'] as const;
 export const SHAPE_NAMES = ['lune', 'goutte', 'feuille', 'éclair', 'spirale', 'cœur'] as const;
 /** Accord de la couleur avec le glyphe : lune, goutte, feuille et spirale sont féminins. */
 const FEMININE = [true, true, true, false, true, false];

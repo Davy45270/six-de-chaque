@@ -20,10 +20,17 @@ describe('palette and art', () => {
         expect(sheet).not.toMatch(/<(circle|polygon|rect)\b/);
     });
     it('the SVG shows only the colour initial in colour-blind mode', () => {
-        for (const [color, initial] of ['O', 'C', 'V', 'J', 'B', 'V'].entries()) {
+        for (const [color, initial] of ['O', 'C', 'V', 'J', 'B', 'R'].entries()) {
             expect(tileSvg(color, 0, { colourBlind: true })).toMatch(new RegExp(`<text [^>]*>${initial}</text>`));
             expect(tileSvg(color, 0, { colourBlind: true, highContrast: true })).toContain(`>${initial}</text>`);
             expect(tileSvg(color, 0)).not.toContain('<text');
+        }
+    });
+    it('colour-blind initials are six distinct letters', () => {
+        for (const highContrast of [false, true]) {
+            const letters = Array.from({ length: 6 }, (_, c) => /<text [^>]*>([^<]+)<\/text>/.exec(tileSvg(c, 0, { colourBlind: true, highContrast }))?.[1]);
+            expect(letters.every(l => l !== undefined && /^[A-Z]$/.test(l))).toBe(true);
+            expect(new Set(letters).size).toBe(6);
         }
     });
     it('every tile has a distinct drawing and a name with shape, colour and pattern', () => {
