@@ -193,3 +193,54 @@ test('opening the replay at the end of a game sends no request outside the built
     expect(outside, 'adresses de même origine hors des fichiers de dist/').toEqual([]);
     expect(errors).toEqual([]);
 });
+
+// Même rejeu (partie bloquée importée, l'humain passe en dernier), parcouru Début, Suivant, Précédent, Fin : aucune
+// connexion WebSocket n'est ouverte et aucune balise d'envoi n'est émise, même si le navigateur ne la montre pas
+// comme requête (sendBeacon est instrumenté avant tout script de la page).
+test('no WebSocket is opened and no beacon is sent while replaying a finished game', async ({ page, context }) => {
+    test.setTimeout(120_000);
+    const sockets: string[] = [];
+    page.on('websocket', ws => sockets.push(ws.url()));
+    await context.addInitScript(() => {
+        const w = window as unknown as { __beacons: string[] };
+        w.__beacons = [];
+        if (typeof navigator.sendBeacon === 'function') {
+            const original = navigator.sendBeacon.bind(navigator);
+            navigator.sendBeacon = (url: string | URL, data?: BodyInit | null) => { w.__beacons.push(String(url)); return original(url, data); };
+        }
+    });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'Six de chaque' })).toBeVisible();
+    // L'instrumentation est bien en place dans la page (sinon l'absence de balise ne prouverait rien).
+    expect(await page.evaluate(() => Array.isArray((window as unknown as { __beacons?: unknown }).__beacons)), 'instrumentation de sendBeacon').toBe(true);
+
+    await page.getByTestId('import-file').setInputFiles('tests/fixtures/blocked.json');
+    await expect(board(page)).toBeVisible();
+    const pass = page.getByRole('button', { name: 'Passer' });
+    await expect(pass).toBeVisible({ timeout: 20_000 });
+    await pass.click();
+    await expect(page.getByRole('heading', { name: 'Partie terminée' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Revoir la partie' }).click();
+    await expect(page.getByRole('heading', { name: 'Rejeu' })).toBeVisible();
+    const step = page.getByTestId('replay-step');
+    await expect(step).toContainText(' — Tu passes.');
+    await page.getByRole('button', { name: 'Début' }).click();
+    await expect(step).toContainText('Coup 0');
+    await page.getByRole('button', { name: 'Suivant' }).click();
+    await expect(step).toHaveText(/^Coup 1 sur /);
+    await page.getByRole('button', { name: 'Suivant' }).click();
+    await expect(step).toHaveText(/^Coup 2 sur /);
+    await page.getByRole('button', { name: 'Précédent' }).click();
+    await expect(step).toHaveText(/^Coup 1 sur /);
+    await page.getByRole('button', { name: 'Fin' }).click();
+    await expect(step).toContainText(' — Tu passes.');
+    // Laisse partir une éventuelle connexion ou balise différée avant le relevé.
+    await page.waitForLoadState('networkidle');
+
+    expect(sockets, 'connexions WebSocket').toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as { __beacons: string[] }).__beacons), 'balises d’envoi').toEqual([]);
+    expect(errors).toEqual([]);
+});

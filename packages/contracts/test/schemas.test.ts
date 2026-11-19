@@ -180,3 +180,39 @@ describe('PLACE placement object', () => {
         }
     });
 });
+
+describe('action identifiers and tile ids', () => {
+    const variants = (): Array<Record<string, unknown>> => [
+        { type: 'PLACE', actorId: 'p1', expectedTurn: 0, actionId: 'a1', placements: [{ tileId: id(0), x: 0, y: 0 }] },
+        { type: 'EXCHANGE', actorId: 'p1', expectedTurn: 0, actionId: 'a1', tileIds: [id(0)] },
+        { type: 'PASS', actorId: 'p1', expectedTurn: 0, actionId: 'a1' }
+    ];
+    const nonStrings: unknown[] = [0, 7, 1.5, null, {}, { id: 'p1' }, ['p1'], true];
+    it('PLACE, EXCHANGE and PASS actions with a non-string actorId are rejected', () => {
+        for (const action of variants()) {
+            expect(validateGameAction(action).ok, `${String(action.type)} valide`).toBe(true);
+            for (const actorId of nonStrings) {
+                expect(validateGameAction({ ...action, actorId }).ok, `${String(action.type)} avec actorId=${JSON.stringify(actorId)}`).toBe(false);
+            }
+        }
+    });
+    it('PLACE, EXCHANGE and PASS actions with a non-string or missing actionId are rejected', () => {
+        for (const action of variants()) {
+            expect(validateGameAction(action).ok, `${String(action.type)} valide`).toBe(true);
+            const { actionId: _a, ...withoutId } = action;
+            expect(validateGameAction(withoutId).ok, `${String(action.type)} sans actionId`).toBe(false);
+            for (const actionId of nonStrings) {
+                expect(validateGameAction({ ...action, actionId }).ok, `${String(action.type)} avec actionId=${JSON.stringify(actionId)}`).toBe(false);
+            }
+        }
+    });
+    it('an EXCHANGE action with a non-string tile id is rejected', () => {
+        const exchange = (tileIds: unknown[]): unknown => ({ type: 'EXCHANGE', actorId: 'p1', expectedTurn: 0, actionId: 'a1', tileIds });
+        expect(validateGameAction(exchange([id(0)])).ok).toBe(true);
+        expect(validateGameAction(exchange([id(0), id(1), id(2)])).ok).toBe(true);
+        for (const bad of nonStrings) {
+            expect(validateGameAction(exchange([bad])).ok, `tileIds=[${JSON.stringify(bad)}]`).toBe(false);
+            expect(validateGameAction(exchange([id(0), bad])).ok, `tileIds=[${id(0)}, ${JSON.stringify(bad)}]`).toBe(false);
+        }
+    });
+});
