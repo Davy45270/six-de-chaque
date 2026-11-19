@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createGame, stateHash } from '@six-de-chaque/engine';
 import { createAiHost } from '../src/host';
 import { AiClient } from '../src/client';
@@ -43,16 +43,16 @@ describe('ai host', () => {
         m.runAll();
         for (const p of m.posted) for (const l of listeners) l({ data: p });
         expect(m.posted.map(p => p.type)).toEqual(['RESULT']);
-        await expect(answer).resolves.toBeNull();
+        await expect(answer).resolves.toEqual({ status: 'stale' });
         // Sans changement, la même demande rend la décision.
         const again = client.request({ type: 'REQUEST_MOVES', gameHash: 'h2', view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'beginner', budgetNodes: 10_000 }, () => current);
         m.runAll();
         for (const p of m.posted.slice(1)) for (const l of listeners) l({ data: p });
-        await expect(again).resolves.toMatchObject({ move: { type: 'PLACE' } });
-        // Annuler côté client rend null tout de suite.
+        await expect(again).resolves.toMatchObject({ status: 'ok', decision: { move: { type: 'PLACE' } } });
+        // Annuler côté client résout la demande tout de suite.
         const cancelled = client.request({ type: 'REQUEST_MOVES', gameHash: 'h3', view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'beginner', budgetNodes: 10_000 }, () => 'h3');
         client.cancel();
-        await expect(cancelled).resolves.toBeNull();
+        await expect(cancelled).resolves.toEqual({ status: 'cancelled' });
         expect(stateHash(pos.state)).toMatch(/^[0-9a-f]{16}$/);
     });
     it('ERROR is posted when the view is malformed', () => {
@@ -144,4 +144,36 @@ it('CANCEL during move generation stops before RESULT', () => {
     m.host({ type: 'CANCEL', requestId: 'annulation' });
     m.runAll();
     expect(m.posted).toEqual([]);
+});
+
+it('the client times out, cancels and ignores a late reply to an expired request', async () => {
+    vi.useFakeTimers();
+    try {
+        const sent: ToWorker[] = [];
+        let receive: (event: { data: FromWorker }) => void = () => {};
+        const client = new AiClient({
+            addEventListener: (_, fn) => { receive = fn; },
+            postMessage: message => { sent.push(message); }
+        }, 10);
+        const original = client.request(request('initial'), () => 'h1');
+        await vi.advanceTimersByTimeAsync(10);
+        await expect(original).resolves.toEqual({ status: 'timeout' });
+        expect(sent[1]).toEqual({ type: 'CANCEL', requestId: sent[0]?.requestId });
+
+        const next = client.request(request('suivant'), () => 'h1');
+        receive({ data: { type: 'ERROR', requestId: sent[0]!.requestId, message: 'En retard' } });
+        receive({ data: { type: 'ERROR', requestId: sent[2]!.requestId, message: 'Échec du calcul' } });
+        await expect(next).resolves.toEqual({ status: 'error', message: 'Échec du calcul' });
+        expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+});
+
+it('the client resolves a synchronous transport exception as an error', async () => {
+    const client = new AiClient({
+        addEventListener: () => {},
+        postMessage: () => { throw new Error('Transport indisponible'); }
+    });
+    await expect(client.request(request('transport'), () => 'h1')).resolves.toEqual({
+        status: 'error', message: 'Error: Transport indisponible'
+    });
 });

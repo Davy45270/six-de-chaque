@@ -15,9 +15,9 @@ function malformed(m: AiRequest): string | null {
 
 export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () => void) => void, sliceNodes = 256): (m: ToWorker) => void {
     const cache = new Map<string, AiDecision>();
-    const cancelled = new Set<string>();
+    const active = new Map<string, () => void>();
     return (m: ToWorker) => {
-        if (m.type === 'CANCEL') { cancelled.add(m.requestId); return; }
+        if (m.type === 'CANCEL') { active.delete(m.requestId); return; }
         const bad = malformed(m);
         if (bad) { post({ type: 'ERROR', requestId: m.requestId, message: bad }); return; }
         const key = `${m.gameHash}|${m.playerId}|${m.level}|${m.type}|${m.budgetNodes}|${m.passLegal}`;
@@ -32,12 +32,13 @@ export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () =>
             post({ type: 'ERROR', requestId: m.requestId, message: String(error) }); return;
         }
         const step = (): void => {
-            if (cancelled.delete(m.requestId)) return;
+            if (active.get(m.requestId) !== step) return;
             try {
                 let done = 0;
                 while (done < sliceNodes) {
                     const r = it.next();
                     if (r.done) {
+                        active.delete(m.requestId);
                         cache.delete(key);
                         cache.set(key, r.value);
                         if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value as string);
@@ -47,11 +48,13 @@ export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () =>
                     done += Math.max(1, r.value);
                 }
             } catch (error) {
+                active.delete(m.requestId);
                 post({ type: 'ERROR', requestId: m.requestId, message: error instanceof Error ? error.message : String(error) });
                 return;
             }
             schedule(step);
         };
+        active.set(m.requestId, step);
         schedule(step);
     };
 }

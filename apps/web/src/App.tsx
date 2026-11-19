@@ -1,9 +1,10 @@
 // Application : écrans, partie en cours, ordinateur dans un Worker, sauvegarde après chaque coup accepté.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createGame, projectPublicState, stateHash, submit } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
+import { chooseAiMove } from './game/ai-turn';
 import type { UiCommand, UiState } from './game/controller';
 import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
@@ -39,10 +40,8 @@ export function App({ example }: { example?: OpenExample }) {
     const [announce, setAnnounce] = useState('');
     const [zoom, setZoom] = useState({ n: 0, factor: 1 });
     const client = useRef<AiClient | null>(null);
-    const hashRef = useRef('');
     const uiRef = useRef<UiState | null>(null);
-    uiRef.current = ui;
-    hashRef.current = ui ? stateHash(ui.session.state) : '';
+    useLayoutEffect(() => { uiRef.current = ui; }, [ui]);
 
     useEffect(() => {
         void dbReady.then(async d => {
@@ -62,9 +61,14 @@ export function App({ example }: { example?: OpenExample }) {
                 setResume({ id: g.id, note: loaded && !loaded.consistent ? 'La sauvegarde ne correspond plus à son journal de coups : elle est gardée, mais elle peut contenir une erreur.' : null });
             }
         }).catch(() => { setMessage('La sauvegarde n’est pas disponible dans ce navigateur : la partie ne sera pas gardée.'); });
-        const worker = new Worker(new URL('../../../packages/ai/src/worker.ts', import.meta.url), { type: 'module' });
-        client.current = new AiClient(worker);
-        return () => { client.current?.cancel(); worker.terminate(); };
+        try {
+            const worker = new Worker(new URL('../../../packages/ai/src/worker.ts', import.meta.url), { type: 'module' });
+            const ai = new AiClient(worker);
+            client.current = ai;
+            return () => { client.current = null; ai.cancel(); worker.terminate(); };
+        } catch {
+            return undefined;
+        }
     }, []);
     useEffect(() => { document.documentElement.classList.toggle('hc', highContrast); }, [highContrast]);
 
@@ -96,8 +100,15 @@ export function App({ example }: { example?: OpenExample }) {
         if (c.t === 'hint') {
             const me = currentPlayer(cur);
             if (!me || me.type !== 'human' || !client.current) return;
-            void client.current.request({ type: 'REQUEST_HINT', gameHash: hashRef.current, view: projectPublicState(cur.session.state, me.id), hand: [...me.hand], playerId: me.id, level: 'intermediate', budgetNodes: 5000 }, () => hashRef.current)
-                .then(d => { const now = uiRef.current; if (d && now && d.move.type === 'PLACE') { setUi(setGhost(now, d.move.placements)); setAnnounce(`Indice : ${d.explanation}`); } });
+            const gameHash = stateHash(cur.session.state);
+            const current = () => uiRef.current?.session === cur.session && uiRef.current.gameId === cur.gameId;
+            void client.current.request({ type: 'REQUEST_HINT', gameHash, view: projectPublicState(cur.session.state, me.id), hand: [...me.hand], playerId: me.id, level: 'intermediate', budgetNodes: 5000 }, () => current() ? gameHash : '')
+                .then(response => {
+                    const now = uiRef.current;
+                    if (response.status !== 'ok' || !now || !current()) return;
+                    const { move, explanation } = response.decision;
+                    if (move.type === 'PLACE') { setUi(setGhost(now, move.placements)); setAnnounce(`Indice : ${explanation}`); }
+                });
             return;
         }
         const { state, submit: action } = reduce(cur, c);
@@ -105,23 +116,33 @@ export function App({ example }: { example?: OpenExample }) {
         if (action) apply(action);
     }, [apply]);
 
-    // Tour de l'ordinateur : délai d'affichage, demande au Worker ; une réponse obsolète est ignorée.
-    const turnKey = ui ? `${ui.gameId}:${ui.session.state.turnNumber}:${ui.handoverFor ?? ''}:${screen}` : '';
-    useEffect(() => {
-        const cur = uiRef.current;
-        if (!cur || screen !== 'play' || cur.session.state.phase === 'finished' || cur.handoverFor) return undefined;
-        const me = currentPlayer(cur);
-        if (me?.type !== 'ai' || !client.current) return undefined;
-        setUi({ ...cur, aiThinking: true });
+    const turnSession = ui?.session;
+    const turnGameId = ui?.gameId;
+    const handoverFor = ui?.handoverFor;
+    useLayoutEffect(() => {
+        if (!turnSession || screen !== 'play' || turnSession.state.phase === 'finished' || handoverFor
+            || currentPlayer({ session: turnSession })?.type !== 'ai') return undefined;
+        let stopped = false;
+        const sameTurn = (now: UiState | null): now is UiState => now?.session === turnSession && now.gameId === turnGameId;
+        const isCurrent = () => !stopped && sameTurn(uiRef.current);
+        const setThinking = (value: boolean) => {
+            setUi(now => sameTurn(now) && now.aiThinking !== value ? { ...now, aiThinking: value } : now);
+        };
+        setThinking(true);
         const timer = setTimeout(() => {
-            const now = uiRef.current;
-            if (!now || !client.current) return;
-            void client.current.request({ type: 'REQUEST_MOVES', gameHash: hashRef.current, view: projectPublicState(now.session.state, me.id), hand: [...me.hand], playerId: me.id,
-                level: me.aiLevel ?? 'beginner', budgetNodes: 20_000 }, () => hashRef.current)
-                .then(d => { if (d) apply(d.move); });
+            void chooseAiMove(turnSession, client.current, isCurrent).then(move => {
+                if (move && isCurrent()) apply(move);
+            }).finally(() => {
+                if (isCurrent()) setThinking(false);
+            });
         }, AI_DELAY_MS);
-        return () => { clearTimeout(timer); client.current?.cancel(); };
-    }, [turnKey, screen, apply]);
+        return () => {
+            stopped = true;
+            clearTimeout(timer);
+            client.current?.cancel();
+            setThinking(false);
+        };
+    }, [turnSession, turnGameId, handoverFor, screen, apply]);
 
     const view = useMemo(() => {
         if (!ui) return null;
@@ -178,7 +199,10 @@ export function App({ example }: { example?: OpenExample }) {
             const name = ui.config.players.find(p => p.id === ui.handoverFor)?.name ?? '';
             return <Handover name={name} onReady={() => { dispatch({ t: 'handoverDone' }); }} />;
         }
-        return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} colourBlind={colourBlind} announce={announce} zoom={zoom} dispatch={dispatch} onMenu={() => { client.current?.cancel(); setScreen('home'); }} />;
+        return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} colourBlind={colourBlind} announce={announce} zoom={zoom} dispatch={dispatch} onMenu={() => {
+            if (currentPlayer(ui)?.type === 'human') client.current?.cancel();
+            setScreen('home');
+        }} />;
     }
     return <Home canResume={Boolean(resume) || Boolean(standardUi && standardUi.session.state.phase !== 'finished')} resumeNote={resume?.note ?? null} highContrast={highContrast} colourBlind={colourBlind} message={message}
         onNew={() => { setScreen('setup'); }}
