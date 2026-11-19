@@ -97,3 +97,8 @@ describe('controller', () => {
         expect(aiTurn.handoverFor).toBeNull();
     });
 });
+
+it('on resume the keyboard cursor starts on the board, not at the origin', () => {
+    const state = stateFrom({ board: [[40, 40, 0, 0]], hands: [[[0, 1]], [[0, 2]]], turn: 1 });
+    expect(ui({ state, events: [] }).cursor).toEqual({ x: 40, y: 40 });
+});

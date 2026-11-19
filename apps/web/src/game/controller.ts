@@ -1,6 +1,6 @@
 // Contrôleur pur de l'interface : sélection, fantôme, score prévisionnel, échange, passe, curseur clavier.
 // Il ne modifie jamais la partie : il propose une action (`submit`) que l'application soumet au moteur.
-import { calculateScore, cellKey, FINAL_BONUS, validateAction, validatePlacements } from '@six-de-chaque/engine';
+import { calculateScore, cellKey, FINAL_BONUS, parseKey, validateAction, validatePlacements } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, Placement, ScoreBreakdown, Session, TileId } from '@six-de-chaque/engine';
 
 export interface UiState {
@@ -34,7 +34,24 @@ export function withSession(s: Omit<UiState, 'session'> & { session?: Session },
     return { ...s, session, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], aiThinking: false, handoverFor: handover };
 }
 export function initialUi(session: Session, config: GameConfig, gameId: string): UiState {
-    return withSession({ config, gameId, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], cursor: { x: 0, y: 0 }, aiThinking: false, handoverFor: null }, session);
+    const cells = Object.keys(session.state.board).map(parseKey);
+    let cursor = { x: 0, y: 0 };
+    if (cells.length > 0) {
+        const xs = cells.map(cell => cell.x);
+        const ys = cells.map(cell => cell.y);
+        const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+        const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
+        let nearest = Infinity;
+        for (const cell of cells) {
+            const distance = (cell.x - centerX) ** 2 + (cell.y - centerY) ** 2;
+            // À distance égale, ordre de lecture par ligne puis par colonne.
+            if (distance < nearest || (distance === nearest && (cell.y < cursor.y || (cell.y === cursor.y && cell.x < cursor.x)))) {
+                cursor = cell;
+                nearest = distance;
+            }
+        }
+    }
+    return withSession({ config, gameId, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], cursor, aiThinking: false, handoverFor: null }, session);
 }
 
 function withGhost(s: UiState, ghost: Placement[]): UiState {

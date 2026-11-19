@@ -147,7 +147,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
             const first = last === null;
             last = args;
             if (first || !fitted) camera = fitBoard(args[0].board, app.screen.width, app.screen.height, CELL_PX, args[1]);
-            if (args[2]) {
+            if (args[2] && !first) {
                 // Garder le curseur clavier visible.
                 const { px, py } = cellToScreen(camera, args[2].x, args[2].y, CELL_PX);
                 const s = CELL_PX * camera.zoom;

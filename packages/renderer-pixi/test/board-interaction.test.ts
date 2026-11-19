@@ -176,3 +176,26 @@ it('a pinch driven by the first finger zooms like one driven by the second', asy
     const second = await cameraAfterGesture([[2, 200, 120]]);
     expect(first).toEqual({ ...second, x: second.x + 20 });
 });
+
+it('the first frame after resume keeps every tile on screen when the board excludes the origin', async () => {
+    const { CELL_PX } = await import('../src/board-view');
+    const { cellToScreen } = await import('../src/camera');
+    vi.spyOn(Image.prototype, 'decode').mockResolvedValue(undefined);
+    const view = await createBoardView(document.createElement('div'), {});
+    try {
+        const tiles = { a: { id: 'a', color: 0, shape: 0 }, b: { id: 'b', color: 0, shape: 1 } };
+        const cells = [{ x: 40, y: 40 }, { x: 41, y: 40 }];
+        view.render({ board: { '40:40': 'a', '41:40': 'b' } }, [], { x: 0, y: 0 }, tiles);
+
+        const camera = view.getCamera();
+        for (const { x, y } of cells) {
+            const { px, py } = cellToScreen(camera, x, y, CELL_PX);
+            expect(px).toBeGreaterThanOrEqual(0);
+            expect(py).toBeGreaterThanOrEqual(0);
+            expect(px + CELL_PX * camera.zoom).toBeLessThanOrEqual(320);
+            expect(py + CELL_PX * camera.zoom).toBeLessThanOrEqual(240);
+        }
+    } finally {
+        view.destroy();
+    }
+});
