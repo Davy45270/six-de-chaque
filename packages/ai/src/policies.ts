@@ -1,6 +1,6 @@
 // Décision à partir de la vue publique. Chaque suspension indique le nombre de nœuds depuis la précédente.
-import { canonicalJson, fnv1a64, getLegalMoves, isDeadPosition, randomInt, seedToState } from '@six-de-chaque/engine';
-import type { AiLevel, GameAction, GameState, Move, PublicGameState, Tile, TileId } from '@six-de-chaque/engine';
+import { canonicalJson, fnv1a64, scanDeadPosition, scanLegalMoves, randomInt, seedToState } from '@six-de-chaque/engine';
+import type { AiLevel, GameAction, GameState, PublicGameState, Tile, TileId } from '@six-de-chaque/engine';
 import { advancedEvaluator, OPEN_FIVE_PENALTY, openFives } from './heuristics';
 import { EXPERT_CANDIDATES, simulateReplies } from './expert';
 import type { RankedMove } from './expert';
@@ -10,7 +10,7 @@ export interface AiDecision { move: GameAction; explanation: string; evaluatedNo
 /** Au plus deux points disponibles et deux combinaisons couleur-glyphe dans la main. */
 export const EXCHANGE_SCORE_THRESHOLD = 2;
 export const EXCHANGE_DIVERSITY_THRESHOLD = 2;
-const SLICE = 64;
+const BUDGET_EXHAUSTED = 'Budget de recherche épuisé avant de trouver un coup légal.';
 
 /** État minimal reconstruit depuis la projection : la main des autres et la réserve restent inconnues. */
 function pseudoState(view: PublicGameState, hand: readonly TileId[], playerId: string): GameState {
@@ -37,7 +37,7 @@ function exchangeChoice(tiles: readonly Tile[], bagCount: number): TileId[] {
 }
 
 export function* decide(view: PublicGameState, hand: readonly TileId[], playerId: string, level: AiLevel, budgetNodes: number,
-    expectedTurn: number, passLegal = false): Generator<number, AiDecision, void> {
+    expectedTurn: number, passLegal?: boolean, moveLimit = Infinity): Generator<number, AiDecision, void> {
     const seed = fnv1a64(canonicalJson(view) + playerId);
     const base = { actorId: playerId, expectedTurn, actionId: `ordi-${expectedTurn}-${seed.slice(0, 8)}` };
     const tiles = hand.map(id => view.tilesById[id]).filter((t): t is Tile => t !== undefined);
@@ -45,43 +45,62 @@ export function* decide(view: PublicGameState, hand: readonly TileId[], playerId
     const state = pseudoState(view, hand, playerId);
     const budget = Number.isFinite(budgetNodes) ? Math.max(0, Math.floor(budgetNodes)) : 0;
     const rankingBudget = level === 'expert' && budget >= 16 ? budget - Math.floor(budget / 2) : budget;
-    // Une pose de secours reste disponible pour une demande à budget nul.
-    const moves = getLegalMoves(state, playerId, Math.max(1, rankingBudget));
-    if (moves.length === 0) {
-        // Toutes les tuiles hors plateau constituent l'union des mains adverses et de la réserve.
-        const onBoard = new Set(Object.values(view.board));
-        const dead = () => isDeadPosition({ ...state, bag: Object.keys(view.tilesById).filter(id => !onBoard.has(id)) });
-        if (passLegal || view.bagCount === 0 || dead()) {
-            return { move: { ...base, type: 'PASS' }, explanation: 'Aucune pose possible, je passe.', evaluatedNodes: 0, seed };
+    const pass = (evaluatedNodes: number): AiDecision => ({
+        move: { ...base, type: 'PASS' }, explanation: 'Aucune pose possible, je passe.', evaluatedNodes, seed
+    });
+    if (passLegal) return pass(0);
+
+    const values: RankedMove[] = [];
+    let advance: ReturnType<typeof advancedEvaluator> | undefined;
+    let evaluatedNodes = 0;
+    let complete = false;
+    const search = scanLegalMoves(state, playerId);
+    while (values.length < moveLimit && evaluatedNodes < (values.length === 0 ? budget : rankingBudget)) {
+        const node = search.next();
+        if (node.done) { complete = true; break; }
+        evaluatedNodes++;
+        if (node.value) {
+            const move = node.value;
+            if (level === 'advanced' || level === 'expert') advance ??= advancedEvaluator(view, tiles);
+            const value = advance ? advance(move) : level === 'beginner' ? 10 + 2 * move.score : move.score - OPEN_FIVE_PENALTY * openFives(view, move);
+            values.push({ move, value });
+        }
+        yield 1;
+    }
+    if (values.length === 0) {
+        if (!complete) throw new Error(BUDGET_EXHAUSTED);
+        if (view.bagCount === 0) return pass(evaluatedNodes);
+        if (passLegal === undefined) {
+            // Les tuiles invisibles et la main connue forment l’ensemble des tuiles hors plateau.
+            const onBoard = new Set(Object.values(view.board));
+            const probe = scanDeadPosition({ ...state, bag: Object.keys(view.tilesById).filter(id => !onBoard.has(id)) });
+            for (;;) {
+                if (evaluatedNodes >= budget) throw new Error(BUDGET_EXHAUSTED);
+                const node = probe.next();
+                if (node.done) return pass(evaluatedNodes);
+                evaluatedNodes++;
+                yield 1;
+                if (node.value) break;
+            }
         }
         const tileIds = exchangeChoice(tiles, view.bagCount);
-        return { move: { ...base, type: 'EXCHANGE', tileIds }, explanation: `Aucune pose possible, j’échange ${tileIds.length} tuile(s).`, evaluatedNodes: 0, seed };
+        return { move: { ...base, type: 'EXCHANGE', tileIds }, explanation: `Aucune pose possible, j’échange ${tileIds.length} tuile(s).`, evaluatedNodes, seed };
     }
-    const advance = level === 'advanced' || level === 'expert' ? advancedEvaluator(view, tiles) : null;
-    const values: RankedMove[] = [];
-    let pending = 0;
-    for (const move of moves.slice(0, rankingBudget)) {
-        const value = advance ? advance(move) : level === 'beginner' ? 10 + 2 * move.score : move.score - OPEN_FIVE_PENALTY * openFives(view, move);
-        values.push({ move, value });
-        if (++pending >= SLICE) { yield pending; pending = 0; }
-    }
-    if (pending) yield pending;
-    let evaluatedNodes = values.length;
-    let chosen = moves[0] as Move;
+    let chosen = (values[0] as RankedMove).move;
     const diverseKinds = new Set(tiles.map(t => t.color * 6 + t.shape)).size;
     if (level !== 'beginner' && view.phase === 'playing' && view.bagCount > 0 && diverseKinds <= EXCHANGE_DIVERSITY_THRESHOLD
-        && moves.length < rankingBudget && values.length > 0 && moves.every(m => m.score <= EXCHANGE_SCORE_THRESHOLD)) {
+        && complete && values.every(({ move }) => move.score <= EXCHANGE_SCORE_THRESHOLD)) {
         const tileIds = exchangeChoice(tiles, tiles.length);
         if (tileIds.length <= view.bagCount) {
             return { move: { ...base, type: 'EXCHANGE', tileIds }, explanation: `La pose rapporte peu, j’échange ${tileIds.length} tuile(s).`, evaluatedNodes, seed };
         }
     }
-    if (level === 'beginner' && values.length) {
+    if (level === 'beginner') {
         const total = values.reduce((a, b) => a + b.value, 0);
         const [draw] = randomInt(total, seedToState(seed));
         let acc = 0;
         chosen = values.find(v => (acc += v.value) > draw)?.move ?? chosen;
-    } else if (values.length) {
+    } else {
         values.sort((a, b) => b.value - a.value || (a.move.key < b.move.key ? -1 : 1));
         chosen = (values[0] as RankedMove).move;
         if (level === 'expert') {

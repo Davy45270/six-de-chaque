@@ -1,4 +1,4 @@
-import { applyAction, FINAL_BONUS, getLegalMoves, seedToState, shuffle } from '@six-de-chaque/engine';
+import { applyAction, FINAL_BONUS, scanLegalMoves, seedToState, shuffle } from '@six-de-chaque/engine';
 import type { GameState, Move, PlaceAction, PublicGameState, RngState, TileId } from '@six-de-chaque/engine';
 
 /** Plusieurs répartitions communes aux candidats pour comparer leurs suites à tirage égal. */
@@ -36,10 +36,21 @@ export function* simulateReplies(view: PublicGameState, hand: readonly TileId[],
             const played = applyAction(simulated, { ...base, type: 'PLACE', placements: candidate.move.placements });
             if (!played.ok) throw new Error('Pose simulée refusée.');
             const opponent = played.state.players[played.state.currentPlayerIndex];
-            const replies = played.state.phase === 'finished' || !opponent ? [] : getLegalMoves(played.state, opponent.id, replyLimit);
-            const replyScore = replies.reduce((best, m) => Math.max(best, m.score + (played.state.bag.length === 0 && m.placements.length === opponent?.hand.length ? FINAL_BONUS : 0)), 0);
+            yield 1;
+            let replyScore = 0;
+            if (played.state.phase !== 'finished' && opponent) {
+                const replies = scanLegalMoves(played.state, opponent.id);
+                for (let j = 0; j < replyLimit; j++) {
+                    const node = replies.next();
+                    if (node.done) break;
+                    yield 1;
+                    const move = node.value;
+                    if (!move) continue;
+                    const bonus = played.state.bag.length === 0 && move.placements.length === opponent.hand.length ? FINAL_BONUS : 0;
+                    replyScore = Math.max(replyScore, move.score + bonus);
+                }
+            }
             values[i] = (values[i] ?? 0) + (played.event.finalBonus - REPLY_WEIGHT * replyScore) / rounds;
-            yield 1 + replies.length;
         }
     }
     const best = values.reduce((winner, value, i) => value > (values[winner] ?? -Infinity) ? i : winner, 0);

@@ -151,3 +151,25 @@ describe('storage', () => {
         expect(await getSetting<boolean>(db, 'highContrast')).toBe(true);
     });
 });
+
+it('T21 an event that is null or malformed gives a controlled error and keeps the existing save', async () => {
+    const db = await fresh();
+    await saveAll(db, 'garde', game(3), config);
+    const before = await loadGame(db, 'garde');
+    const exported = JSON.parse(await exportGame(db, 'garde')) as { events: unknown[] };
+    for (const event of [null, [], {}, 42, { action: null }, { ...(exported.events[0] as object), finalBonus: '0' }]) {
+        const bad = { ...exported, events: [event, ...exported.events.slice(1)] };
+        const result = await importGame(db, JSON.stringify(bad), () => 'garde');
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.reason).not.toEqual('');
+    }
+    expect(await loadGame(db, 'garde')).toEqual(before);
+    expect(await listGames(db)).toHaveLength(1);
+});
+
+it('export refuses a game whose log does not replay to its snapshot', async () => {
+    const db = await fresh();
+    const session = game(3);
+    await saveAll(db, 'incohérente', { ...session, events: session.events.slice(0, -1) }, config);
+    await expect(exportGame(db, 'incohérente')).rejects.toBeInstanceOf(SaveError);
+});

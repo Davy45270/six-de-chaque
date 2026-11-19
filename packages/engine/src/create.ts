@@ -8,6 +8,9 @@ import type { GameConfig, GameState, RulesConfig } from './types';
 export const DEFAULT_RULES: RulesConfig = { blockedEndPolicy: 'fullPassRound', coordinateLimit: 100_000 };
 
 export function createGame(config: GameConfig, seed: string): GameState {
+    const rules = { ...DEFAULT_RULES, ...config.rules };
+    const policy: unknown = rules.blockedEndPolicy;
+    if (policy !== 'fullPassRound') throw new Error('Politique de fin par blocage inconnue.');
     const n = config.players.length;
     if (n < 2 || n > 4) throw new Error('une partie se joue de 2 à 4 joueurs');
     if (!config.players.some(p => p.type === 'human')) throw new Error('il faut au moins un joueur humain');
@@ -32,6 +35,6 @@ export function createGame(config: GameConfig, seed: string): GameState {
     return {
         version: GAME_VERSION, seed, rngState, phase: 'opening', turnNumber: 0, currentPlayerIndex: first,
         tilesById: tilesRecord(), board: {}, players, bag: order.slice(n * HAND_SIZE),
-        consecutivePasses: 0, config: { ...DEFAULT_RULES, ...config.rules }, endReason: null
+        consecutivePasses: 0, config: rules, endReason: null
     };
 }

@@ -32,8 +32,9 @@ export function playSource(seed: string, turns: number): { config: GameConfig; e
         const player = state.players[state.currentPlayerIndex];
         if (!player) throw new Error('joueur source absent');
         const pass: GameAction = { type: 'PASS', actorId: player.id, expectedTurn: state.turnNumber, actionId: 'passe' };
+        // La campagne historique échantillonne les 128 premières poses légales.
         const { move } = decideNow(projectPublicState(state, player.id), player.hand, player.id, 'beginner',
-            128, state.turnNumber, validateAction(state, pass).ok);
+            20_000, state.turnNumber, validateAction(state, pass).ok, 128);
         const next = submit(session, move);
         if (!next.result.ok) throw new Error(next.result.error.detail);
         session = next.session;

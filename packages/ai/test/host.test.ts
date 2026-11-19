@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { createGame, stateHash } from '@six-de-chaque/engine';
 import { createAiHost } from '../src/host';
 import { AiClient } from '../src/client';
-import type { FromWorker, ToWorker } from '../src/protocol';
+import type { AiRequest, FromWorker, ToWorker } from '../src/protocol';
 import { configOf } from '../../engine/test/play';
 import { positionOf } from './positions';
+import { stateFrom } from '../../engine/test/fixtures';
 
 function manual() {
     const queue: Array<() => void> = [];
@@ -14,7 +15,7 @@ function manual() {
     return { queue, posted, host, runAll };
 }
 const pos = positionOf(createGame(configOf(2), 'hote'));
-const request = (requestId: string, gameHash = 'h1'): ToWorker => ({ type: 'REQUEST_MOVES', requestId, gameHash, view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'intermediate', budgetNodes: 10_000 });
+const request = (requestId: string, gameHash = 'h1'): AiRequest => ({ type: 'REQUEST_MOVES', requestId, gameHash, view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'intermediate', budgetNodes: 10_000 });
 
 describe('ai host', () => {
     it('T24 CANCEL stops the search before RESULT', () => {
@@ -57,7 +58,7 @@ describe('ai host', () => {
     it('ERROR is posted when the view is malformed', () => {
         const m = manual();
         m.host({ ...request('bad'), view: null } as unknown as ToWorker);
-        m.host({ ...request('bad2'), hand: ['t-999'] } as ToWorker);
+        m.host({ ...request('bad2'), hand: ['t-999'] });
         m.runAll();
         expect(m.posted.map(p => [p.type, p.requestId])).toEqual([['ERROR', 'bad'], ['ERROR', 'bad2']]);
     });
@@ -79,12 +80,68 @@ it('REQUEST_HINT is answered like REQUEST_MOVES with its own cache key', () => {
     const m = manual();
     m.host(request('move'));
     expect(m.runAll()).toBeGreaterThan(0);
-    m.host({ ...request('hint'), type: 'REQUEST_HINT' } as ToWorker);
+    m.host({ ...request('hint'), type: 'REQUEST_HINT' });
     expect(m.runAll()).toBeGreaterThan(0);
-    m.host({ ...request('cached-hint'), type: 'REQUEST_HINT' } as ToWorker);
+    m.host({ ...request('cached-hint'), type: 'REQUEST_HINT' });
     expect(m.runAll()).toBe(0);
     const [move, hint, cached] = m.posted;
     expect(move).toMatchObject({ type: 'RESULT', requestId: 'move', decision: { move: { type: 'PLACE' } } });
     expect(hint).toEqual({ ...move, requestId: 'hint' });
     expect(cached).toEqual({ ...hint, requestId: 'cached-hint' });
+});
+
+it('cache key includes the node budget', () => {
+    const m = manual();
+    m.host({ ...request('large'), budgetNodes: 10 });
+    m.runAll();
+    m.host({ ...request('small'), budgetNodes: 1 });
+    expect(m.runAll()).toBeGreaterThan(0);
+    expect(m.posted[1]).toMatchObject({ type: 'RESULT', decision: { evaluatedNodes: 1 } });
+});
+
+it('cache evicts the least recently used decision', () => {
+    const m = manual();
+    const lookup = (i: number) => {
+        m.host({ ...request(`r${i}`, `h${i}`), budgetNodes: 1 });
+        return m.runAll();
+    };
+    for (let i = 0; i < 64; i++) expect(lookup(i)).toBeGreaterThan(0);
+    expect(lookup(0)).toBe(0);
+    expect(lookup(64)).toBeGreaterThan(0);
+    expect(lookup(0)).toBe(0);
+    expect(lookup(1)).toBeGreaterThan(0);
+
+    const concurrent = manual();
+    concurrent.host({ ...request('premier', 'h0'), budgetNodes: 1 });
+    concurrent.host({ ...request('retardé', 'h0'), budgetNodes: 1 });
+    concurrent.queue.shift()?.();
+    const delayed = concurrent.queue.shift();
+    if (!delayed) throw new Error('demande concurrente attendue');
+    for (let i = 1; i < 64; i++) {
+        concurrent.host({ ...request(`r${i}`, `h${i}`), budgetNodes: 1 });
+        concurrent.runAll();
+    }
+    delayed();
+    concurrent.host({ ...request('nouveau', 'h64'), budgetNodes: 1 });
+    concurrent.runAll();
+    concurrent.host({ ...request('récent', 'h0'), budgetNodes: 1 });
+    expect(concurrent.runAll()).toBe(0);
+    concurrent.host({ ...request('ancien', 'h1'), budgetNodes: 1 });
+    expect(concurrent.runAll()).toBeGreaterThan(0);
+});
+
+it('CANCEL during move generation stops before RESULT', () => {
+    const state = stateFrom({
+        board: Array.from({ length: 12 }, (_, i) => [i * 3, 0, 0, i % 4]),
+        hands: [[[5, 5]], [[4, 4]]], bagCount: 0
+    });
+    const { view, hand, playerId } = positionOf(state);
+    const m = manual();
+    m.host({ ...request('annulation'), view, hand, playerId });
+    m.queue.shift()?.();
+    expect(m.posted).toEqual([]);
+    expect(m.queue).toHaveLength(1);
+    m.host({ type: 'CANCEL', requestId: 'annulation' });
+    m.runAll();
+    expect(m.posted).toEqual([]);
 });

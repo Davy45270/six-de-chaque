@@ -1,5 +1,5 @@
 // Règles de pose, sans contrôle du tour : partagées par la validation et le générateur de coups.
-import { boardLookup, cellKey, isValidLine, MAX_LINE, segmentAt } from './lines';
+import { cellKey, isValidLine, MAX_LINE, STEP } from './lines';
 import type { Axis } from './lines';
 import type { GameState, Placement, Tile, TileId } from './types';
 import { OK, reject } from './reject';
@@ -15,7 +15,7 @@ export function validatePlacements(state: GameState, hand: readonly TileId[], pl
     if (placements.some(p => Math.abs(p.x) > limit || Math.abs(p.y) > limit)) return reject('OUT_OF_BOUNDS', 'Case hors du plateau.');
     const inHand = new Set(hand);
     if (placements.some(p => !inHand.has(p.tileId))) return reject('NOT_IN_HAND', 'Cette tuile n’est pas dans ta main.');
-    if (placements.some(p => state.board[cellKey(p.x, p.y)] !== undefined)) return reject('OCCUPIED', 'Cette case est déjà occupée.');
+    if (placements.some(p => Object.hasOwn(state.board, cellKey(p.x, p.y)))) return reject('OCCUPIED', 'Cette case est déjà occupée.');
     const first = placements[0] as Placement;
     let axis: Axis | null = null;
     if (placements.length > 1) {
@@ -24,31 +24,42 @@ export function validatePlacements(state: GameState, hand: readonly TileId[], pl
         else return reject('NOT_ALIGNED', 'Les tuiles doivent être sur une même ligne ou une même colonne.');
     }
     const added = new Map(placements.map(p => [cellKey(p.x, p.y), p.tileId]));
-    const at = boardLookup(state.board, added);
-    const occupied = (x: number, y: number): boolean => at(x, y) !== undefined;
+    const contact = { found: false };
+    const at = (x: number, y: number): TileId | undefined => {
+        const key = cellKey(x, y);
+        const placed = added.get(key);
+        if (placed !== undefined) return placed;
+        const existing = state.board[key];
+        if (existing !== undefined) contact.found = true;
+        return existing;
+    };
     if (axis) {
         const along = placements.map(p => (axis === 'h' ? p.x : p.y));
         const lo = Math.min(...along), hi = Math.max(...along);
-        for (let v = lo; v <= hi; v++) {
-            if (!(axis === 'h' ? occupied(v, first.y) : occupied(first.x, v))) return reject('GAP', 'La ligne posée a un trou.');
+        for (let v = lo; v <= Math.min(hi, lo + MAX_LINE); v++) {
+            if ((axis === 'h' ? at(v, first.y) : at(first.x, v)) === undefined) return reject('GAP', 'La ligne posée a un trou.');
+        }
+        if (hi - lo >= MAX_LINE) return reject('LINE_TOO_LONG', 'Une ligne ne peut pas dépasser six tuiles.');
+    }
+    // Sur l’axe commun, le contrôle des trous établit que toutes les poses forment un seul segment.
+    for (const ax of ['h', 'v'] as const) {
+        const [dx, dy] = STEP[ax];
+        for (const p of ax === axis ? [first] : placements) {
+            const tiles: Tile[] = [state.tilesById[p.tileId] as Tile];
+            for (const dir of [-1, 1]) {
+                for (let x = p.x + dir * dx, y = p.y + dir * dy; ; x += dir * dx, y += dir * dy) {
+                    const id = at(x, y);
+                    if (id === undefined) break;
+                    if (tiles.length === MAX_LINE) return reject('LINE_TOO_LONG', 'Une ligne ne peut pas dépasser six tuiles.');
+                    tiles.push(state.tilesById[id] as Tile);
+                }
+            }
+            if (tiles.length > 1 && !isValidLine(tiles)) return reject('INVALID_LINE', 'Une ligne doit partager une couleur ou un glyphe, sans doublon.');
         }
     }
-    const tile = (x: number, y: number): Tile => state.tilesById[at(x, y) as TileId] as Tile;
-    const seen = new Set<string>();
-    for (const p of placements) {
-        for (const ax of ['h', 'v'] as const) {
-            const cells = segmentAt(occupied, p.x, p.y, ax);
-            const start = cells[0] as { x: number; y: number };
-            const id = `${ax}:${start.x}:${start.y}`;
-            if (cells.length < 2 || seen.has(id)) continue;
-            seen.add(id);
-            if (cells.length > MAX_LINE) return reject('LINE_TOO_LONG', 'Une ligne ne peut pas dépasser six tuiles.');
-            if (!isValidLine(cells.map(c => tile(c.x, c.y)))) return reject('INVALID_LINE', 'Une ligne doit partager une couleur ou un glyphe, sans doublon.');
-        }
-    }
-    if (Object.keys(state.board).length > 0) {
-        const touches = placements.some(p => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => state.board[cellKey(p.x + (dx ?? 0), p.y + (dy ?? 0))] !== undefined));
-        if (!touches) return reject('DISCONNECTED', 'Le coup doit toucher une tuile déjà posée.');
+    // Une partie commence sur un plateau vide. Ensuite, un segment lu doit établir le contact.
+    if (state.phase !== 'opening' && !contact.found) {
+        return reject('DISCONNECTED', 'Le coup doit toucher une tuile déjà posée.');
     }
     return OK;
 }

@@ -13,40 +13,42 @@ export function moveKey(state: GameState, placements: readonly Placement[]): str
     return placements.map(p => { const t = state.tilesById[p.tileId]; return `${p.x},${p.y},${t?.color ?? -1},${t?.shape ?? -1}`; }).sort().join(';');
 }
 
-function frontier(state: GameState): Array<{ x: number; y: number }> {
+function* frontier(state: GameState): Generator<{ x: number; y: number }, void, void> {
     const keys = Object.keys(state.board);
-    if (keys.length === 0) return [{ x: 0, y: 0 }];
-    const out = new Map<string, { x: number; y: number }>();
+    if (keys.length === 0) yield { x: 0, y: 0 };
+    const seen = new Set<string>();
     for (const key of keys) {
         const [x, y] = key.split(':').map(Number) as [number, number];
         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
             const k = cellKey(x + dx, y + dy);
-            if (state.board[k] === undefined) out.set(k, { x: x + dx, y: y + dy });
+            if (state.board[k] === undefined && !seen.has(k)) {
+                seen.add(k);
+                yield { x: x + dx, y: y + dy };
+            }
         }
     }
-    return [...out.values()];
 }
 
-export function getLegalMoves(state: GameState, playerId: string, limit = Infinity): Move[] {
+/** Chaque suspension compte une pose candidate ou une case sans tuile compatible. */
+export function* scanLegalMoves(state: GameState, playerId: string): Generator<Move | null, void, void> {
     const player = state.players.find(p => p.id === playerId);
-    if (!player || limit <= 0) return [];
+    if (!player) return;
     const hand = player.hand;
     const tiles = hand.map(id => state.tilesById[id]).filter((t): t is Tile => t !== undefined);
     const bound = state.config.coordinateLimit;
-    const found = new Map<string, Move>();
+    const found = new Set<string>();
     const placed = new Map<string, TileId>();
     const at = (x: number, y: number): TileId | undefined => placed.get(cellKey(x, y)) ?? state.board[cellKey(x, y)];
     const occupied = (x: number, y: number): boolean => at(x, y) !== undefined;
     const tileAt = (x: number, y: number): Tile => state.tilesById[at(x, y) as TileId] as Tile;
     const used = new Set<TileId>();
-    const record = (list: Placement[]): void => {
+    const record = (list: Placement[]): Move | null => {
         const key = moveKey(state, list);
-        if (found.has(key)) return;
-        if (!validatePlacements(state, hand, list).ok) return;
-        found.set(key, { placements: list.map(p => ({ ...p })), score: calculateScore(state.board, list).total, key });
+        if (found.has(key) || !validatePlacements(state, hand, list).ok) return null;
+        found.add(key);
+        return { placements: list.map(p => ({ ...p })), score: calculateScore(state.board, list).total, key };
     };
-    const search = (axis: Axis, list: Placement[]): void => {
-        if (found.size >= limit) return;
+    function* search(axis: Axis, list: Placement[]): Generator<Move | null, void, void> {
         if (list.length >= hand.length) return;
         const [dx, dy] = STEP[axis];
         const ends: Array<{ x: number; y: number }> = [];
@@ -59,10 +61,9 @@ export function getLegalMoves(state: GameState, playerId: string, limit = Infini
         }
         for (const cell of ends) {
             if (Math.abs(cell.x) > bound || Math.abs(cell.y) > bound) continue;
-            tryCell(axis, list, cell.x, cell.y);
-            if (found.size >= limit) return;
+            yield* tryCell(axis, list, cell.x, cell.y);
         }
-    };
+    }
     // Tuiles déjà alignées de part et d'autre d'une case, lues une fois par case et non une fois par tuile essayée.
     const run = (x: number, y: number, dx: number, dy: number): Tile[] => {
         const out: Tile[] = [];
@@ -70,31 +71,41 @@ export function getLegalMoves(state: GameState, playerId: string, limit = Infini
         return out;
     };
     const fits = (line: Tile[], t: Tile): boolean => line.length < MAX_LINE && (line.length === 0 || isValidLine([...line, t]));
-    const tryCell = (axis: Axis | null, list: Placement[], x: number, y: number): void => {
+    function* tryCell(axis: Axis | null, list: Placement[], x: number, y: number): Generator<Move | null, void, void> {
         const h = [...run(x, y, -1, 0), ...run(x, y, 1, 0)];
         const v = [...run(x, y, 0, -1), ...run(x, y, 0, 1)];
         const tried = new Set<number>();
+        let compatible = false;
         for (const t of tiles) {
             if (used.has(t.id) || tried.has(t.color * 6 + t.shape)) continue;
             tried.add(t.color * 6 + t.shape);
             if (!fits(h, t) || !fits(v, t)) continue;
+            compatible = true;
             placed.set(cellKey(x, y), t.id);
             used.add(t.id);
             const next = [...list, { tileId: t.id, x, y }];
-            record(next);
-            if (axis) search(axis, next);
-            else { search('h', next); search('v', next); }
+            yield record(next);
+            if (axis) yield* search(axis, next);
+            else { yield* search('h', next); yield* search('v', next); }
             placed.delete(cellKey(x, y));
             used.delete(t.id);
-            if (found.size >= limit) return;
         }
-    };
+        if (!compatible) yield null;
+    }
     for (const cell of frontier(state)) {
         if (Math.abs(cell.x) > bound || Math.abs(cell.y) > bound) continue;
-        tryCell(null, [], cell.x, cell.y);
-        if (found.size >= limit) break;
+        yield* tryCell(null, [], cell.x, cell.y);
     }
-    return [...found.values()].slice(0, limit);
+}
+
+export function getLegalMoves(state: GameState, playerId: string, limit = Infinity): Move[] {
+    if (limit <= 0) return [];
+    const moves: Move[] = [];
+    for (const move of scanLegalMoves(state, playerId)) {
+        if (move) moves.push(move);
+        if (moves.length >= limit) break;
+    }
+    return moves.slice(0, limit);
 }
 
 export function findAnyLegalPlacement(state: GameState, playerId: string): Placement[] | null {
@@ -106,14 +117,19 @@ export function findAnyLegalPlacement(state: GameState, playerId: string): Place
  * Un coup de plusieurs tuiles contient toujours une tuile posable seule (lignes héritées, contact), donc ce
  * contrôle suffit. Dans ce cas l'échange ne peut plus rien débloquer : la passe devient légale.
  */
-export function isDeadPosition(state: GameState): boolean {
+export function* scanDeadPosition(state: GameState): Generator<Move | null, void, void> {
     const kinds = new Map<number, TileId>();
     for (const id of [...state.players.flatMap(p => p.hand), ...state.bag]) {
         const t = state.tilesById[id];
         if (t && !kinds.has(t.color * 6 + t.shape)) kinds.set(t.color * 6 + t.shape, id);
     }
     const probe = state.players[0];
-    if (!probe) return true;
+    if (!probe) return;
     const pseudo: GameState = { ...state, players: [{ ...probe, hand: [...kinds.values()] }, ...state.players.slice(1)] };
-    return getLegalMoves(pseudo, probe.id, 1).length === 0;
+    yield* scanLegalMoves(pseudo, probe.id);
+}
+
+export function isDeadPosition(state: GameState): boolean {
+    for (const move of scanDeadPosition(state)) if (move) return false;
+    return true;
 }

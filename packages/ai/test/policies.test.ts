@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import { createGame, getLegalMoves, moveKey, projectPublicState, tileId, validateAction } from '@six-de-chaque/engine';
 import { getLegalMoves as aiMoves } from '@six-de-chaque/ai';
 import type { Move } from '@six-de-chaque/ai';
-import { decideNow, openFives } from '../src/policies';
+import { decide, decideNow, openFives } from '../src/policies';
 import { stateFrom } from '../../engine/test/fixtures';
 import { configOf } from '../../engine/test/play';
 import { positionOf, positions } from './positions';
@@ -157,4 +157,24 @@ it('beginner picks among legal moves with a low score bias', () => {
     }
     expect(top / trials).toBeGreaterThan(baseline + 0.015);
     expect(top / trials).toBeLessThan(baseline + 0.18);
+});
+
+it('the node budget also caps move generation', () => {
+    const state = stateFrom({
+        board: Array.from({ length: 12 }, (_, i) => [i * 3, 0, 0, i % 4]),
+        hands: [[[5, 5]], [[4, 4]]], bagCount: 0
+    });
+    const { view, hand, playerId } = positionOf(state);
+    let emptyCellReads = 0;
+    const measured = new Proxy(view.board, {
+        get(board, key) {
+            if (typeof key !== 'string') return undefined;
+            if (!Object.hasOwn(board, key)) emptyCellReads++;
+            return board[key];
+        }
+    });
+    const search = decide({ ...view, board: measured }, hand, playerId, 'intermediate', 1, 0);
+    expect(search.next()).toEqual({ done: false, value: 1 });
+    expect(() => search.next()).toThrow(/budget/i);
+    expect(emptyCellReads).toBeLessThan(12);
 });

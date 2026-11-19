@@ -104,7 +104,7 @@ export function migrateSave(save: SaveData): CurrentSave {
     const problems = checkInvariants(strict ? { ...snapshot, config: { ...snapshot.config, ...config.rules } } : snapshot);
     if (problems.length) throw new SaveError(`Partie incohérente : ${problems[0]}.`);
     if (!Array.isArray(save.events) || typeof save.checksum !== 'string') throw new SaveError('Sauvegarde incomplète.');
-    if ((save.events as unknown[]).some(e => !e || typeof e !== 'object' || !('action' in e) || !validateGameAction(e.action).ok)) throw new SaveError('Journal des coups invalide.');
+    if ((save.events as unknown[]).some(e => !e || typeof e !== 'object' || !('action' in e) || !Object.hasOwn(e, 'score') || !validateGameAction(e.action).ok)) throw new SaveError('Journal des coups invalide.');
     const oldEvents = save.events as GameEvent[];
 
     try {

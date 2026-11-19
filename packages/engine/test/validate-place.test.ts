@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { validateAction } from '../src/validate';
-import { tileId } from '../src/tiles';
+import { ALL_TILES, tileId } from '../src/tiles';
 import type { GameAction, GameState } from '../src/types';
 import { stateFrom } from './fixtures';
 import type { FixtureSpec } from './fixtures';
@@ -79,4 +79,28 @@ describe('validateAction PLACE', () => {
             expect(built).toEqual(before);
         }), { numRuns: 300 });
     });
+});
+
+it('placement validation reads O(k·L) cells', () => {
+    const cross: P[] = [1, 2, 3, 4, 5].flatMap(i => [[-i, 0, 0, i, 0], [0, -i, i, 0, 0]] as P[]);
+    for (const placements of [[[0, 0, 0, 0, 0]], [[1, -1, 1, 1, 0], [2, -1, 1, 2, 0]]] satisfies P[][]) {
+        const used = new Set([...cross, ...placements, [0, 0, 5, 5, 2] as P]
+            .map(([, , color, shape, copy]) => tileId(color, shape, copy ?? 0)));
+        const filler = ALL_TILES.filter(t => !used.has(t.id)).map((t, i): P => [
+            20 + i * 2, 20, t.color, t.shape, [0, 1, 2].find(c => tileId(t.color, t.shape, c) === t.id)
+        ]);
+        for (const size of [10, 100]) {
+            const { state, action, result } = check({ board: [...cross, ...filler].slice(0, size) }, placements);
+            expect(Object.keys(state.board)).toHaveLength(size);
+            expect(result).toEqual({ ok: true });
+            let reads = 0;
+            // Compte les lectures du contenu et détecte les parcours du plateau entier.
+            const measured = new Proxy(state.board, {
+                get(target, key) { reads++; return typeof key === 'string' ? target[key] : undefined; },
+                ownKeys(target) { const keys = Reflect.ownKeys(target); reads += keys.length; return keys; }
+            });
+            expect(validateAction({ ...state, board: measured }, action)).toEqual(result);
+            expect(reads).toBeLessThanOrEqual(placements.length * 2 * 7);
+        }
+    }
 });

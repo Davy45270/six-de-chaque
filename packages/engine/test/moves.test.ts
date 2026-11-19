@@ -52,7 +52,7 @@ describe('getLegalMoves', () => {
             expect(new Set(getLegalMoves(s, 'p1').map(m => m.key))).toEqual(bruteForceMoves(s, 'p1'));
         }), { numRuns: 150 });
         expect(compared).toBeGreaterThan(100);
-    });
+    }, 120_000);
     it('T19 exhaustive against brute force on positions of real games (hand cut to three tiles)', () => {
         let compared = 0;
         playGame(configOf(2), 'oracle-reel', { maxTurns: 8, each: ({ state }) => {

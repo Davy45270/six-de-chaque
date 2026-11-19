@@ -33,3 +33,24 @@ describe('replay', () => {
         expect(() => replay(config, 'doublon', [events[0] ?? e1, { ...e1, actionId: events[0]?.actionId ?? '' }])).toThrow(/déjà jouée/);
     });
 });
+
+it('replay rejects an event whose finalBonus was altered', () => {
+    const config = configOf(2);
+    const { events } = playGame(config, 'bonus', { maxTurns: 1 });
+    expect(() => replay(config, 'bonus', [{ ...events[0]!, finalBonus: 6 }])).toThrow(/bonus/);
+});
+
+it('replay rejects an event whose actionId differs from its action', () => {
+    const config = configOf(2);
+    const { events } = playGame(config, 'identité', { maxTurns: 1 });
+    expect(() => replay(config, 'identité', [{ ...events[0]!, actionId: 'autre' }])).toThrow(/identifiant/);
+});
+
+it('T17 two independent runs of the same seed give the same final hash', () => {
+    const run = () => playGame(configOf(3), 'parties-indépendantes');
+    const first = run().state;
+    const second = run().state;
+    expect(first.phase).toBe('finished');
+    expect(second.phase).toBe('finished');
+    expect(stateHash(first)).toBe(stateHash(second));
+});

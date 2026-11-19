@@ -1,14 +1,15 @@
 // Export et import après vérification de l'instantané et du journal.
 import { stateHash } from '@six-de-chaque/engine';
 import { loadGame, saveAll } from './db';
-import { CURRENT_VERSION, migrateSave } from './migrations';
+import { CURRENT_VERSION, migrateSave, SaveError } from './migrations';
 import type { CurrentSave } from './migrations';
 
 export const SAVE_FORMAT = 'six-de-chaque-save';
 export interface ExportedGame extends CurrentSave { format: typeof SAVE_FORMAT; seed: string }
 
 export async function exportGame(db: IDBDatabase, gameId: string): Promise<string> {
-    const { session, config } = await loadGame(db, gameId);
+    const { session, config, consistent } = await loadGame(db, gameId);
+    if (!consistent) throw new SaveError('Le journal des coups ne redonne pas cette partie.');
     const out: ExportedGame = { format: SAVE_FORMAT, version: CURRENT_VERSION, config, seed: session.state.seed, snapshot: session.state, events: session.events, checksum: stateHash(session.state) };
     return JSON.stringify(out);
 }

@@ -60,9 +60,15 @@ export function applyAction(state: GameState, action: GameAction, prevHash: stri
         case 'PASS': {
             const passes = state.consecutivePasses + 1;
             next = { ...state, consecutivePasses: passes };
-            next = passes >= state.players.length
-                ? { ...next, turnNumber: state.turnNumber + 1, phase: 'finished', endReason: 'blocked' }
-                : advance(next);
+            const policy: unknown = state.config.blockedEndPolicy;
+            switch (policy) {
+                case 'fullPassRound':
+                    next = passes >= state.players.length
+                        ? { ...next, turnNumber: state.turnNumber + 1, phase: 'finished', endReason: 'blocked' }
+                        : advance(next);
+                    break;
+                default: next = advance(next);
+            }
             break;
         }
     }

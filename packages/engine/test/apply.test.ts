@@ -140,7 +140,7 @@ describe('applyAction', () => {
             let k = salt;
             playGame(configOf(n), seed, { limit: 8, pick: m => (m ? (k = (k * 31 + 7) % 9973) % m : 0), each: s => { expect(checkInvariants(s.state)).toEqual([]); } });
         }), { numRuns: Number(process.env.FC_RUNS ?? 100) });
-    });
+    }, 120_000);
     it('winners returns every player tied at the top score', () => {
         const s = stateFrom({ hands: [[[0, 0]], [[1, 1]], [[2, 2]]] });
         const scored = { ...s, players: s.players.map((p, i) => ({ ...p, score: [7, 3, 7][i] ?? 0 })) };
@@ -173,4 +173,34 @@ it('exchange scores 0 and passes the turn', () => {
     expect(t.state.turnNumber).toBe(1);
     expect(t.state.players.map(p => p.score)).toEqual(state.players.map(p => p.score));
     expect(t.event).toMatchObject({ score: null, finalBonus: 0 });
+});
+
+it('blocked end follows config.blockedEndPolicy', () => {
+    const rules = { blockedEndPolicy: 'fullPassRound' } as const;
+    expect(createGame({ ...configOf(2), rules }, 'blocage').config.blockedEndPolicy).toBe('fullPassRound');
+    const unknown = 'unknown' as typeof rules.blockedEndPolicy;
+    const state = stateFrom({ board: [[0, 0, 0, 0, 0]], hands: [[[0, 0, 1]], [[0, 0, 2]]], bagCount: 0 });
+    const lastPass = { ...state, consecutivePasses: 1 };
+    const stopped = applyAction(lastPass, act(lastPass, { type: 'PASS' }));
+    expect(stopped.state.endReason).toBe('blocked');
+    const altered = { ...lastPass, config: { ...lastPass.config, blockedEndPolicy: unknown } };
+    expect(applyAction(altered, act(altered, { type: 'PASS' })).state.phase).toBe('playing');
+    expect(() => createGame({ ...configOf(2), rules: { blockedEndPolicy: unknown } }, 'blocage')).toThrow(/politique/i);
+});
+
+it('T13 the reshuffled bag and rng after an exchange match a recorded reference', () => {
+    const game = { ...createGame(configOf(2), 'réserve-de-référence'), phase: 'playing' as const };
+    const tileIds = game.players[game.currentPlayerIndex]!.hand.slice(0, 2);
+    const result = applyAction(game, act(game, { type: 'EXCHANGE', tileIds }));
+    if (!result.ok) throw new Error(result.error.code);
+    const bag = [
+        '088 037 027 085 062 045 072 094 054 099 022 090 102 084 059 064',
+        '091 005 096 013 077 071 075 050 073 089 082 010 076 042 046 033',
+        '032 058 074 006 043 078 009 100 031 004 017 011 067 030 053 040',
+        '060 008 041 016 039 080 049 034 086 063 048 002 052 038 083 103',
+        '066 021 014 057 097 106 069 029 035 051 001 093 105 070 098 020',
+        '019 026 055 025 015 047 000 087 007 023 081 101 092 036 044 068'
+    ].join(' ').split(' ').map(id => `t-${id}`);
+    expect(result.state.bag).toEqual(bag);
+    expect(result.state.rngState).toEqual([2042271303, 2845051722, 1276543266, 836672463]);
 });

@@ -20,7 +20,7 @@ export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () =>
         if (m.type === 'CANCEL') { cancelled.add(m.requestId); return; }
         const bad = malformed(m);
         if (bad) { post({ type: 'ERROR', requestId: m.requestId, message: bad }); return; }
-        const key = `${m.gameHash}|${m.playerId}|${m.level}|${m.type}|${m.budgetNodes}|${m.passLegal ?? false}`;
+        const key = `${m.gameHash}|${m.playerId}|${m.level}|${m.type}|${m.budgetNodes}|${m.passLegal}`;
         const hit = cache.get(key);
         if (hit) {
             cache.delete(key); cache.set(key, hit);
@@ -28,7 +28,7 @@ export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () =>
             return;
         }
         let it: ReturnType<typeof decide>;
-        try { it = decide(m.view, m.hand, m.playerId, m.level, m.budgetNodes, m.view.turnNumber, m.passLegal ?? false); } catch (error) {
+        try { it = decide(m.view, m.hand, m.playerId, m.level, m.budgetNodes, m.view.turnNumber, m.passLegal); } catch (error) {
             post({ type: 'ERROR', requestId: m.requestId, message: String(error) }); return;
         }
         const step = (): void => {
@@ -38,6 +38,7 @@ export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () =>
                 while (done < sliceNodes) {
                     const r = it.next();
                     if (r.done) {
+                        cache.delete(key);
                         cache.set(key, r.value);
                         if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value as string);
                         post({ type: 'RESULT', requestId: m.requestId, gameHash: m.gameHash, decision: r.value });

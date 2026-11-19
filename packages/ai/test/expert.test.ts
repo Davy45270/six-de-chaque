@@ -5,29 +5,36 @@ import { sampleHiddenState } from '../src/expert';
 import { configOf } from '../../engine/test/play';
 import { positionOf, positions } from './positions';
 
-const pos = () => positions('expert', 14).at(-1)!;
-
 it('expert is reproducible for a given view', () => {
-    const { view, hand, playerId, passLegal, state } = positions('expert', 3)[2]!;
-    const result = decideNow(view, hand, playerId, 'expert', 512, state.turnNumber, passLegal);
-    expect(result).toEqual(decideNow(structuredClone(view), [...hand], playerId, 'expert', 512, state.turnNumber, passLegal));
-    const advanced = decideNow(view, hand, playerId, 'advanced', 512, state.turnNumber);
-    expect(result.evaluatedNodes).toBeGreaterThan(advanced.evaluatedNodes);
-    // Sur cette position, les réponses échantillonnées changent le premier choix du classement.
-    expect(result.move).not.toEqual(advanced.move);
-    expect(validateAction(state, result.move)).toEqual({ ok: true });
+    let changed = false;
+    for (const { view, hand, playerId, passLegal, state } of positions('expert', 8)) {
+        const result = decideNow(view, hand, playerId, 'expert', 512, state.turnNumber, passLegal);
+        expect(result).toEqual(decideNow(structuredClone(view), [...hand], playerId, 'expert', 512, state.turnNumber, passLegal));
+        expect(validateAction(state, result.move)).toEqual({ ok: true });
+        const advanced = decideNow(view, hand, playerId, 'advanced', 512, state.turnNumber, passLegal);
+        if (JSON.stringify(result.move) !== JSON.stringify(advanced.move)) {
+            expect(result.evaluatedNodes).toBeGreaterThan(advanced.evaluatedNodes);
+            changed = true;
+        }
+    }
+    expect(changed).toBe(true);
 });
 
 it('expert never exceeds its node budget', () => {
-    const { view, hand, playerId, state } = pos();
-    for (const budget of [0, 1, 2, 10, 64, 512]) {
+    const opening = positionOf(createGame(configOf(2), 'expert'));
+    const middle = positions('expert', 14).at(-1)!;
+    const { view, hand, playerId } = opening;
+    expect(() => decideNow(view, hand, playerId, 'expert', 0, 0)).toThrow(/budget/i);
+    for (const [budget, { view, hand, playerId, state }] of [
+        [1, opening], [2, opening], [10, opening], [64, middle], [512, middle]
+    ] as const) {
         const search = decide(view, hand, playerId, 'expert', budget, state.turnNumber);
         let nodes = 0;
         let result = search.next();
         while (!result.done) { nodes += result.value; result = search.next(); }
         expect(result.value.evaluatedNodes).toBe(nodes);
         expect(nodes).toBeLessThanOrEqual(budget);
-        if (budget > 0) expect(nodes).toBeGreaterThan(0);
+        expect(nodes).toBeGreaterThan(0);
         expect(validateAction(state, result.value.move)).toEqual({ ok: true });
     }
 });

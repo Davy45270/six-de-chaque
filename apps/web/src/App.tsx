@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createGame, projectPublicState, stateHash, submit } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
-import { currentPlayer, humanCount, initialUi, passLegal, reduce, setGhost, withSession } from './game/controller';
+import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
 import type { UiCommand, UiState } from './game/controller';
 import { describeEvent } from './game/describe';
 import { getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting } from './storage/db';
@@ -103,7 +103,7 @@ export function App() {
             const now = uiRef.current;
             if (!now || !client.current) return;
             void client.current.request({ type: 'REQUEST_MOVES', gameHash: hashRef.current, view: projectPublicState(now.session.state, me.id), hand: [...me.hand], playerId: me.id,
-                level: me.aiLevel ?? 'beginner', budgetNodes: 20_000, passLegal: passLegal(now.session) }, () => hashRef.current)
+                level: me.aiLevel ?? 'beginner', budgetNodes: 20_000 }, () => hashRef.current)
                 .then(d => { if (d) apply(d.move); });
         }, AI_DELAY_MS);
         return () => { clearTimeout(timer); client.current?.cancel(); };
