@@ -8,7 +8,8 @@ import type { GameConfig, GameState, RulesConfig } from './types';
 export const DEFAULT_RULES: RulesConfig = { blockedEndPolicy: 'fullPassRound', coordinateLimit: 100_000 };
 
 export function createGame(config: GameConfig, seed: string): GameState {
-    const rules = { ...DEFAULT_RULES, ...config.rules };
+    const { blockedEndPolicy = DEFAULT_RULES.blockedEndPolicy, coordinateLimit = DEFAULT_RULES.coordinateLimit } = config.rules ?? {};
+    const rules: RulesConfig = { blockedEndPolicy, coordinateLimit };
     const policy: unknown = rules.blockedEndPolicy;
     if (policy !== 'fullPassRound') throw new Error('Politique de fin par blocage inconnue.');
     if (!Number.isInteger(rules.coordinateLimit) || rules.coordinateLimit < 1) {

@@ -80,10 +80,12 @@ export function applyAction(state: GameState, action: GameAction, prevHash: stri
 }
 
 function structuredCloneAction(action: GameAction): GameAction {
-    switch (action.type) {
-        case 'PLACE': return { ...action, placements: action.placements.map(p => ({ ...p })) };
-        case 'EXCHANGE': return { ...action, tileIds: [...action.tileIds] };
-        case 'PASS': return { ...action };
+    const { actorId, expectedTurn, actionId, type } = action;
+    const base = { actorId, expectedTurn, actionId };
+    switch (type) {
+        case 'PLACE': return { ...base, type, placements: action.placements.map(({ tileId, x, y }) => ({ tileId, x, y })) };
+        case 'EXCHANGE': return { ...base, type, tileIds: [...action.tileIds] };
+        case 'PASS': return { ...base, type };
     }
 }
 

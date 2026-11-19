@@ -2,7 +2,8 @@ import 'fake-indexeddb/auto';
 import { expect, it } from 'vitest';
 import { openDb, saveAll, saveTurn } from '../src/storage/db';
 import { exportGame, serializeGame } from '../src/storage/transfer';
-import { configOf, playGame } from '../../../packages/engine/test/play';
+import { submit } from '@six-de-chaque/engine';
+import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
 
 // Une sauvegarde ou un export de partie ne transporte aucun secret d'authentification : ni clé qui en porte le
 // nom, ni valeur qui ressemble à un jeton (JWT, longue chaîne hexadécimale ou base64). Les empreintes de la
@@ -29,18 +30,23 @@ it('the saved snapshot carries no authentication secret', async () => {
         ...config, authToken, players: config.players.map(player => ({ ...player, authToken })),
         rules
     };
-    const session = playGame(config, 'sauvegarde', { maxTurns: 6 });
+    const initial = playGame(injected, 'sauvegarde', { maxTurns: 0 });
+    const action = nextAction(initial);
+    if (action.type !== 'PLACE') throw new Error('pose attendue');
+    const injectedAction = { ...action, authToken, placements: action.placements.map(p => ({ ...p, authToken })) };
+    const { session, result } = submit(initial, injectedAction);
+    expect(result.ok).toBe(true);
     const db = await openDb('secrets');
-    const readGames = () => new Promise<unknown[]>((resolve, reject) => {
-        const read = db.transaction('games').objectStore('games').getAll();
+    const readStore = (store: 'games' | 'events') => new Promise<unknown[]>((resolve, reject) => {
+        const read = db.transaction(store).objectStore(store).getAll();
         read.onsuccess = () => { resolve(read.result); };
         read.onerror = () => { reject(read.error ?? new Error('lecture')); };
     });
     try {
         await saveAll(db, 'partie-1', session, injected);
-        const savedAll = await readGames();
+        const savedAll = await Promise.all([readStore('games'), readStore('events')]);
         await saveTurn(db, 'partie-1', session, injected);
-        const savedTurn = await readGames();
+        const savedTurn = await Promise.all([readStore('games'), readStore('events')]);
         expect(findSecrets({
             savedAll, savedTurn, serialized: JSON.parse(serializeGame(session, injected)) as unknown
         })).toEqual([]);
