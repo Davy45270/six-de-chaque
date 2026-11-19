@@ -30,12 +30,14 @@ la conception détaillée et les plans de travail sont tenus hors de ce dépôt.
 
 - `packages/engine` : tuiles, PRNG xoshiro128**, empreintes FNV-1a, création de partie, validation, score,
   transitions, journal chaîné, rejeu, projection publique, générateur de coups légaux.
-- `packages/contracts` : schémas JSON de la partie et des actions, validateurs ajv.
-- `packages/ai` : politiques débutant et intermédiaire, hôte de Worker annulable, client.
+- `packages/contracts` : schémas JSON des instantanés v1 et v2 et des actions, validateurs ajv.
+- `packages/ai` : politiques débutant, intermédiaire, avancé et expert, hôte de Worker annulable, client.
+  Le paquet réexporte les types et le générateur de coups du moteur. Le niveau expert compte ses nœuds de recherche.
 - `packages/renderer-pixi` : art (galets, glyphes, motifs), caméra, vue PixiJS du plateau ; aucune règle.
 - `packages/shared` : types non métier.
 - `apps/web` : application React (écrans, main, clavier, historique), IndexedDB, PWA ; le build sort dans
-  `dist/` à la racine. `?seed=<texte>` dans l'adresse fixe la graine d'une nouvelle partie.
+  `dist/` à la racine. Les sauvegardes sont écrites en v2. La lecture d’une v1 vérifie le rejeu et reconstruit
+  le journal chaîné avant l’écriture. `?seed=<texte>` dans l'adresse fixe la graine d'une nouvelle partie.
 
 ## Tests : ciblés, jamais la suite complète
 
