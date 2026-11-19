@@ -12,6 +12,8 @@ import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
 import { completeChallenge, getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting } from './storage/db';
 import { exportGame, importGame, serializeGame } from './storage/transfer';
+import { addCompleted, readAppearance, readCompleted, writeAppearance } from './storage/fallback';
+import type { AppearanceKey } from './storage/fallback';
 import { Home } from './screens/Home';
 import { Setup } from './screens/Setup';
 import { Play } from './screens/Play';
@@ -33,10 +35,11 @@ export function App({ example }: { example?: OpenExample }) {
     const [ui, setUi] = useState<UiState | null>(example?.ui ?? null);
     const exampleId = example?.ui.gameId;
     const standardUi = ui?.gameId === exampleId ? null : ui;
-    const [highContrast, setHighContrast] = useState(false);
-    const [colourBlind, setColourBlind] = useState(false);
-    const changedAppearance = useRef({ highContrast: false, colourBlind: false });
-    const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set());
+    // Réglages d'apparence : la copie synchrone fait foi dès le premier rendu ; la base ne sert qu'à défaut.
+    const [highContrast, setHighContrast] = useState(() => readAppearance('highContrast') ?? false);
+    const [colourBlind, setColourBlind] = useState(() => readAppearance('colourBlind') ?? false);
+    const knownAppearance = useRef({ highContrast: readAppearance('highContrast') !== undefined, colourBlind: readAppearance('colourBlind') !== undefined });
+    const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set(readCompleted()));
     const [resume, setResume] = useState<SavedResume | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [announce, setAnnounce] = useState('');
@@ -53,8 +56,9 @@ export function App({ example }: { example?: OpenExample }) {
                 getSetting<boolean>(d, 'colourBlind'),
                 getSetting<string[]>(d, 'completedChallenges')
             ]);
-            if (!changedAppearance.current.highContrast) setHighContrast(contrast ?? false);
-            if (!changedAppearance.current.colourBlind) setColourBlind(letters ?? false);
+            // Valeur de la base retenue seulement si aucun choix n'est connu ici (sauvegarde d'une version antérieure).
+            if (!knownAppearance.current.highContrast && contrast !== undefined) setHighContrast(contrast);
+            if (!knownAppearance.current.colourBlind && letters !== undefined) setColourBlind(letters);
             setCompleted(previous => new Set([...(progress ?? []), ...previous]));
             const last = await getSetting<string>(d, 'lastGameId');
             const games = await listGames(d);
@@ -75,7 +79,7 @@ export function App({ example }: { example?: OpenExample }) {
             return undefined;
         }
     }, []);
-    useEffect(() => { document.documentElement.classList.toggle('hc', highContrast); }, [highContrast]);
+    useLayoutEffect(() => { document.documentElement.classList.toggle('hc', highContrast); }, [highContrast]);
 
     const open = useCallback((session: Session, config: GameConfig, gameId: string) => {
         client.current?.cancel();
@@ -172,17 +176,17 @@ export function App({ example }: { example?: OpenExample }) {
         withDb(d => saveAll(d, gameId, session, config));
         open(session, config, gameId);
     };
-    const toggleContrast = (on: boolean): void => {
-        changedAppearance.current.highContrast = true;
-        setHighContrast(on);
-        withDb(d => setSetting(d, 'highContrast', on));
+    // Le choix est écrit d'abord en copie synchrone (survit à un rechargement immédiat), puis dans la base.
+    const toggleAppearance = (key: AppearanceKey, on: boolean, set: (on: boolean) => void): void => {
+        knownAppearance.current[key] = true;
+        writeAppearance(key, on);
+        set(on);
+        withDb(d => setSetting(d, key, on));
     };
-    const toggleColourBlind = (on: boolean): void => {
-        changedAppearance.current.colourBlind = true;
-        setColourBlind(on);
-        withDb(d => setSetting(d, 'colourBlind', on));
-    };
+    const toggleContrast = (on: boolean): void => { toggleAppearance('highContrast', on, setHighContrast); };
+    const toggleColourBlind = (on: boolean): void => { toggleAppearance('colourBlind', on, setColourBlind); };
     const markComplete = (id: string): void => {
+        addCompleted(id);
         setCompleted(previous => new Set([...previous, id]));
         withDb(d => completeChallenge(d, id));
     };
