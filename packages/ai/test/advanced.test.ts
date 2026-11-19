@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { applyAction, getLegalMoves, tileId } from '@six-de-chaque/engine';
+import { scanLegalMoves } from '@six-de-chaque/engine/internal/move-scan';
 import { decideNow } from '../src/policies';
 import { stateFrom } from '../../engine/test/fixtures';
 import { positionOf } from './positions';
@@ -25,7 +26,7 @@ it('advanced prefers a move that keeps mobility', () => {
         const result = applyAction(state, { type: 'PLACE', actorId: 'p1', expectedTurn: 0, actionId: 'mobility', placements: [placement] });
         if (!result.ok) throw new Error(result.error.code);
         expect(result.event.score?.total).toBe(3);
-        const remaining = getLegalMoves(result.state, 'p1');
+        const remaining = [...scanLegalMoves(result.state, 'p1')].filter(move => move !== null);
         expect(remaining).toHaveLength(cells); // Il reste une tuile, chaque pose correspond à une case.
     }
     expect(choice(state)).toEqual([mobile]);

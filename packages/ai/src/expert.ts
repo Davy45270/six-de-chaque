@@ -1,4 +1,5 @@
-import { applyAction, FINAL_BONUS, scanLegalMoves, seedToState, shuffle } from '@six-de-chaque/engine';
+import { applyAction, FINAL_BONUS, seedToState, shuffle } from '@six-de-chaque/engine';
+import { scanLegalMoves } from '@six-de-chaque/engine/internal/move-scan';
 import type { GameState, Move, PlaceAction, PublicGameState, RngState, TileId } from '@six-de-chaque/engine';
 
 /** Plusieurs répartitions communes aux candidats pour comparer leurs suites à tirage égal. */

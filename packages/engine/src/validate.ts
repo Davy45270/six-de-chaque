@@ -1,5 +1,5 @@
 // Validation d'une action, sans mutation. Ordre : cycle d'un tour (phase, acteur, tour), puis règles de l'action.
-import { findAnyLegalPlacement, isDeadPosition } from './moves';
+import { findAnyLegalPlacement, isDeadPosition } from './move-scan';
 import { validatePlacements } from './placement';
 import { OK, reject } from './reject';
 import type { Validation } from './reject';

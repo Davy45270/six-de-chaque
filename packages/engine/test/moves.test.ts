@@ -44,6 +44,25 @@ describe('getLegalMoves', () => {
             } });
         }
     });
+    it('every move returned by getLegalMoves is accepted by validateAction, off turn and after the end included', () => {
+        let currentMoves = 0;
+        const finished = playGame(configOf(3), 'revue', { each: ({ state }) => {
+            if (state.turnNumber > 4 && state.phase !== 'finished') return;
+            for (const player of state.players) {
+                const context = `${state.phase}, tour ${state.turnNumber}, joueur ${player.id}`;
+                const moves = getLegalMoves(state, player.id);
+                const canPlay = state.phase !== 'finished' && player.id === state.players[state.currentPlayerIndex]?.id;
+                if (canPlay) currentMoves += moves.length;
+                else expect.soft(moves.length, context).toBe(0);
+                const refusal = moves.map(({ placements }) => validateAction(state, {
+                    type: 'PLACE', actorId: player.id, expectedTurn: state.turnNumber, actionId: 'pose', placements
+                })).find(result => !result.ok);
+                expect.soft(refusal, context).toBeUndefined();
+            }
+        } });
+        expect(finished.state.phase).toBe('finished');
+        expect(currentMoves).toBeGreaterThan(0);
+    });
     it('T19 exhaustive against brute force on small boards', () => {
         let compared = 0;
         fc.assert(fc.property(smallState, s => {

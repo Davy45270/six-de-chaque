@@ -1,5 +1,6 @@
 // Décision à partir de la vue publique. Chaque suspension indique le nombre de nœuds depuis la précédente.
-import { canonicalJson, fnv1a64, scanDeadPosition, scanLegalMoves, randomInt, seedToState } from '@six-de-chaque/engine';
+import { canonicalJson, fnv1a64, scanDeadPosition, randomInt, seedToState } from '@six-de-chaque/engine';
+import { scanLegalMoves } from '@six-de-chaque/engine/internal/move-scan';
 import type { AiLevel, GameAction, GameState, PublicGameState, Tile, TileId } from '@six-de-chaque/engine';
 import { advancedEvaluator, OPEN_FIVE_PENALTY, openFives } from './heuristics';
 import { EXPERT_CANDIDATES, simulateReplies } from './expert';

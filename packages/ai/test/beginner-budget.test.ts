@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { createGame, projectPublicState, scanLegalMoves, submit } from '@six-de-chaque/engine';
+import { createGame, projectPublicState, submit } from '@six-de-chaque/engine';
+import { scanLegalMoves } from '@six-de-chaque/engine/internal/move-scan';
 import type { GameConfig, Session } from '@six-de-chaque/engine';
 import { decideNow } from '../src/policies';
 import { nextAction } from '../../engine/test/play';

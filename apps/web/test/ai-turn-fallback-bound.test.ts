@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { cellKey, getLegalMoves, validateAction } from '@six-de-chaque/engine';
+import { cellKey, isDeadPosition, validateAction } from '@six-de-chaque/engine';
 import type { Session } from '@six-de-chaque/engine';
 import { chooseAiMove } from '../src/game/ai-turn';
 import { stateFrom } from '../../../packages/engine/test/fixtures';
@@ -29,7 +29,7 @@ it('the fallback returns a legal move within 50 ms on a 108-tile board with no p
     expect(onBoard + state.players.reduce((n, p) => n + p.hand.length, 0) + state.bag.length).toBe(108);
     expect(onBoard).toBe(72);
     expect(state.board[cellKey(25, 5)]).toBeDefined();
-    for (const p of state.players) expect(getLegalMoves(state, p.id), p.id).toHaveLength(0);
+    expect(isDeadPosition(state)).toBe(true);
 
     await chooseAiMove(session, null, () => true); // échauffement
     const times: number[] = [];
