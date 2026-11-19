@@ -1,4 +1,4 @@
-// Vue PixiJS du plateau : galets posés, fantôme à 55 %, curseur clavier en contour épais. Glisser = déplacer,
+// Vue PixiJS du plateau : galets posés, fantôme avec contour, curseur clavier en contour épais. Glisser = déplacer,
 // molette ou pincement = zoom, toucher = choisir une case. Aucune règle ici : la vue affiche ce qu'on lui donne.
 import { Application, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Placement, PublicGameState, Tile, TileId } from '@six-de-chaque/engine';
@@ -78,11 +78,18 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
             layer.addChild(sprite);
         };
         for (const [key, id] of Object.entries(view.board)) { const [x, y] = key.split(':').map(Number) as [number, number]; put(id, x, y, 1); }
-        for (const g of ghost) put(g.tileId, g.x, g.y, 0.55);
+        const ghostAlpha = appearance.highContrast ? 1 : 0.55;
+        for (const g of ghost) put(g.tileId, g.x, g.y, ghostAlpha);
         overlay.clear();
         for (const g of ghost) {
             const { px, py } = cellToScreen(camera, g.x, g.y, CELL_PX);
-            overlay.roundRect(px + s * 0.04, py + s * 0.04, s * 0.92, s * 0.92, s * 0.28).stroke({ width: Math.max(2, s * 0.04), color: INK, alpha: 0.55 });
+            if (appearance.highContrast) {
+                overlay.roundRect(px + s * 0.13, py + s * 0.13, s * 0.74, s * 0.74, s * 0.2)
+                    .stroke({ width: Math.max(2, s * 0.075), color: ink, alpha: ghostAlpha });
+            } else {
+                overlay.roundRect(px + s * 0.04, py + s * 0.04, s * 0.92, s * 0.92, s * 0.28)
+                    .stroke({ width: Math.max(2, s * 0.04), color: INK, alpha: ghostAlpha });
+            }
         }
         if (cursor) {
             const { px, py } = cellToScreen(camera, cursor.x, cursor.y, CELL_PX);
