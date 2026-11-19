@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cellKey } from '@six-de-chaque/engine';
 import type { GameEvent, PublicGameState, Tile } from '@six-de-chaque/engine';
 import { Board, TileImage, tileLabel } from '../components';
@@ -37,6 +37,13 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
         screenRef.current?.querySelector<HTMLElement>('.board')?.focus({ preventScroll: true });
         screenRef.current?.scrollIntoView({ block: 'start' });
     }, [dispatch]);
+    // Refus d'une fin de tour au clavier : annoncé tant que l'état de la partie n'a pas changé.
+    const [refused, setRefused] = useState<{ text: string; ui: UiState } | null>(null);
+    const refusal = useCallback((c: UiCommand): string | null => {
+        if (c.t === 'validate') return myTurn && ui.preview ? null : 'Aucun coup prévu';
+        if (c.t === 'pass') return canPass ? null : 'Passer n’est pas permis';
+        return ui.mode === 'exchange' && ui.exchangeSel.length > 0 ? null : exchangeLabel(0);
+    }, [myTurn, canPass, ui]);
     useEffect(() => {
         const onKey = (e: KeyboardEvent): void => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -46,11 +53,15 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
             const c = keyToCommand(e.key, ui);
             if (!c) return;
             e.preventDefault();
-            if (endsTurn(c)) endTurn(c); else dispatch(c);
+            if (!endsTurn(c)) { dispatch(c); return; }
+            // Même règle que les boutons, lue AVANT le coup : une fin de tour refusée ne joue rien, ne bouge ni la
+            // vue ni le focus, et le refus est annoncé.
+            const reason = refusal(c);
+            if (reason === null) endTurn(c); else setRefused({ text: reason, ui });
         };
         window.addEventListener('keydown', onKey);
         return () => { window.removeEventListener('keydown', onKey); };
-    }, [ui, dispatch, endTurn]);
+    }, [ui, dispatch, endTurn, refusal]);
     const left = new Set(myTurn ? handLeft(ui) : viewerHand ?? []);
     const history: GameEvent[] = ui.session.events.slice(-12).reverse();
     const shown = (viewerHand ?? []).map(id => tiles[id]).filter((t): t is Tile => t !== undefined);
@@ -122,7 +133,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                     {history.map(e => <li key={e.seq} value={e.seq + 1}>{describeEvent(e, ui.config, tiles)}</li>)}
                 </ol></>}
             </section>
-            <p className="sr-only" aria-live="polite" data-testid="announce">{announce}</p>
+            <p className="sr-only" aria-live="polite" data-testid="announce">{refused?.ui === ui ? refused.text : announce}</p>
         </main>
     );
 }
