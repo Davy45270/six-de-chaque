@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { cellKey } from '@six-de-chaque/engine';
 import type { GameEvent, PublicGameState, Tile } from '@six-de-chaque/engine';
 import { Board, TileImage, tileLabel } from '../components';
@@ -8,6 +8,9 @@ import { keyToCommand } from '../game/keyboard';
 import { describeEvent } from '../game/describe';
 import { turnLabel } from '../game/turn-label';
 import { exchangeLabel } from '../game/labels';
+
+/** Commandes qui terminent le tour du joueur : valider, passer, confirmer l'échange. */
+const endsTurn = (c: UiCommand): boolean => c.t === 'validate' || c.t === 'pass' || c.t === 'confirmExchange';
 
 export interface PlayProps {
     ui: UiState; view: PublicGameState; viewerHand: string[] | null; highContrast: boolean; colourBlind: boolean; announce: string; zoom: { n: number; factor: number };
@@ -24,6 +27,16 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
     const cursorId = ui.ghost.find(g => g.x === ui.cursor.x && g.y === ui.cursor.y)?.tileId ?? view.board[cellKey(ui.cursor.x, ui.cursor.y)];
     const cursorTile = cursorId === undefined ? undefined : tiles[cursorId];
     const cursorContent = cursorTile ? tileLabel(cursorTile) : 'vide';
+    // Un bouton qui joue le tour se désactive ou disparaît : le focus tomberait sur le corps de la page, laissée
+    // défilée vers le bas où le joueur a dû aller chercher le bouton. Le focus va au plateau, où la partie
+    // continue, et le haut de l'écran (scores, tour, plateau) revient à la vue. Boutons et raccourcis clavier
+    // passent par ce seul chemin.
+    const screenRef = useRef<HTMLElement>(null);
+    const endTurn = useCallback((c: UiCommand): void => {
+        dispatch(c);
+        screenRef.current?.querySelector<HTMLElement>('.board')?.focus({ preventScroll: true });
+        screenRef.current?.scrollIntoView({ block: 'start' });
+    }, [dispatch]);
     useEffect(() => {
         const onKey = (e: KeyboardEvent): void => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -33,23 +46,14 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
             const c = keyToCommand(e.key, ui);
             if (!c) return;
             e.preventDefault();
-            dispatch(c);
+            if (endsTurn(c)) endTurn(c); else dispatch(c);
         };
         window.addEventListener('keydown', onKey);
         return () => { window.removeEventListener('keydown', onKey); };
-    }, [ui, dispatch]);
+    }, [ui, dispatch, endTurn]);
     const left = new Set(myTurn ? handLeft(ui) : viewerHand ?? []);
     const history: GameEvent[] = ui.session.events.slice(-12).reverse();
     const shown = (viewerHand ?? []).map(id => tiles[id]).filter((t): t is Tile => t !== undefined);
-    // Un bouton qui joue le tour se désactive ou disparaît : le focus tomberait sur le corps de la page, laissée
-    // défilée vers le bas où le joueur a dû aller chercher le bouton. Le focus va au plateau, où la partie
-    // continue, et le haut de l'écran (scores, tour, plateau) revient à la vue.
-    const screenRef = useRef<HTMLElement>(null);
-    const endTurn = (c: UiCommand): void => {
-        dispatch(c);
-        screenRef.current?.querySelector<HTMLElement>('.board')?.focus({ preventScroll: true });
-        screenRef.current?.scrollIntoView({ block: 'start' });
-    };
     return (
         <main className="screen play" ref={screenRef}>
             <header className="status">
