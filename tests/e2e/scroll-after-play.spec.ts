@@ -24,11 +24,15 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 360, height: 740 }
             }
             await expect(page.getByTestId('preview')).toHaveText(/^Coup prévu/, { timeout: 15_000 });
             const validate = page.getByRole('button', { name: 'Valider' });
+            // Le joueur fait défiler la page jusqu'au bas du panneau : la page doit être réellement défilée avant le coup.
+            await page.getByTestId('history').scrollIntoViewIfNeeded();
+            expect(await page.evaluate(() => window.scrollY), 'page non défilée avant Valider').toBeGreaterThan(0);
             const before = await validate.evaluate(el => ({ top: Math.round(el.getBoundingClientRect().top), bottom: Math.round(el.getBoundingClientRect().bottom), innerHeight: window.innerHeight }));
             console.log(`avant Valider : ${JSON.stringify(before)}`);
             await validate.click();
             const after = await page.evaluate(() => ({ scrollY: Math.round(window.scrollY), focus: document.activeElement?.className ?? '' }));
             console.log(`après Valider : ${JSON.stringify(after)}`);
+            expect(after.scrollY, 'la page reste défilée juste après Valider').toBe(0);
             await expect(page.getByTestId('history')).toContainText('Joueuse au long nom');
             // Les trois ordinateurs jouent, puis c'est de nouveau au joueur.
             await myTurn(page);
