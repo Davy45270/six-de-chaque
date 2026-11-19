@@ -102,7 +102,7 @@ export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' 
         const replayed = replay(config, state.seed, events);
         const hash = stateHash(replayed);
         if (stateHash(state) === saved.checksum) return { ...loaded, config, consistent: hash === saved.checksum };
-        if (events.at(-1)?.stateHash !== hash) return loaded;
+        if (hash !== saved.checksum) return loaded;
         recovered = { session: { state: replayed, events }, config, consistent: true, recovered: true };
     } catch {
         return loaded;

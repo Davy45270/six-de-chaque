@@ -141,7 +141,10 @@ it('a corrupted snapshot is rebuilt from an intact journal', async () => {
     }
 });
 
-it('a truncated journal never overwrites a newer valid snapshot', async () => {
+it.each([
+    { name: 'a truncated journal never overwrites a newer valid snapshot', corrupt: false },
+    { name: 'a truncated journal never replaces the last saved turn, even with a corrupted snapshot', corrupt: true }
+])('$name', async ({ corrupt }) => {
     const config = configOf(2);
     const session = playGame(config, 'journal-tronqué', { maxTurns: 4 });
     const last = session.events.at(-1);
@@ -151,6 +154,13 @@ it('a truncated journal never overwrites a newer valid snapshot', async () => {
         await saveAll(db, gameId, session, config);
         await setSetting(db, 'lastGameId', gameId);
         await updateSave(db, 'events', events => { events.delete([gameId, last.seq]); });
+        if (corrupt) {
+            const players = session.state.players.map((p, i) => i === 0 ? { ...p, score: p.score + 50 } : p);
+            await updateSave(db, 'games', games => {
+                const read = games.get(gameId);
+                read.onsuccess = () => { games.put({ ...read.result, snapshot: { ...session.state, players } }); };
+            });
+        }
         const before = await readSave(db);
         const load = vi.spyOn(storage, 'loadGame');
         mount();
