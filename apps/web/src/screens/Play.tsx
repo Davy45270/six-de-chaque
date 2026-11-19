@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { cellKey } from '@six-de-chaque/engine';
 import type { GameEvent, PublicGameState, Tile } from '@six-de-chaque/engine';
 import { Board, TileImage, tileLabel } from '../components';
@@ -41,8 +41,17 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
     const left = new Set(myTurn ? handLeft(ui) : viewerHand ?? []);
     const history: GameEvent[] = ui.session.events.slice(-12).reverse();
     const shown = (viewerHand ?? []).map(id => tiles[id]).filter((t): t is Tile => t !== undefined);
+    // Un bouton qui joue le tour se désactive ou disparaît : le focus tomberait sur le corps de la page, laissée
+    // défilée vers le bas où le joueur a dû aller chercher le bouton. Le focus va au plateau, où la partie
+    // continue, et le haut de l'écran (scores, tour, plateau) revient à la vue.
+    const screenRef = useRef<HTMLElement>(null);
+    const endTurn = (c: UiCommand): void => {
+        dispatch(c);
+        screenRef.current?.querySelector<HTMLElement>('.board')?.focus({ preventScroll: true });
+        screenRef.current?.scrollIntoView({ block: 'start' });
+    };
     return (
-        <main className="screen play">
+        <main className="screen play" ref={screenRef}>
             <header className="status">
                 <ul className="players" aria-label="Scores">
                     {view.players.map((p, i) => (
@@ -92,14 +101,14 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                 </p>}
                 <div className="controls">
                     {ui.mode === 'place' ? <>
-                        <button type="button" className="primary" disabled={!myTurn || !ui.preview} onClick={() => { dispatch({ t: 'validate' }); }}>Valider</button>
+                        <button type="button" className="primary" disabled={!myTurn || !ui.preview} onClick={() => { endTurn({ t: 'validate' }); }}>Valider</button>
                         <button type="button" disabled={!myTurn || ui.ghost.length === 0} onClick={() => { dispatch({ t: 'undoGhost' }); }}>Retirer</button>
                         <button type="button" disabled={!myTurn || ui.ghost.length === 0} onClick={() => { dispatch({ t: 'clearGhost' }); }}>Annuler</button>
                         {canExchange && <button type="button" onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Échanger</button>}
-                        {canPass && <button type="button" onClick={() => { dispatch({ t: 'pass' }); }}>Passer</button>}
+                        {canPass && <button type="button" onClick={() => { endTurn({ t: 'pass' }); }}>Passer</button>}
                         {!challenge && <button type="button" disabled={!myTurn} onClick={() => { dispatch({ t: 'hint' }); }}>Indice</button>}
                     </> : <>
-                        <button type="button" className="primary" disabled={ui.exchangeSel.length === 0} onClick={() => { dispatch({ t: 'confirmExchange' }); }}>Confirmer l’échange</button>
+                        <button type="button" className="primary" disabled={ui.exchangeSel.length === 0} onClick={() => { endTurn({ t: 'confirmExchange' }); }}>Confirmer l’échange</button>
                         <button type="button" onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Retour à la pose</button>
                     </>}
                 </div>
