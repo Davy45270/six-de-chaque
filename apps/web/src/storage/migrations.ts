@@ -67,7 +67,7 @@ function v1Projection(state: GameState, strict: boolean): unknown {
 
 const digest = (value: unknown): string => fnv1a64(canonicalJson(value));
 
-function checkedConfig(raw: unknown, version: 1 | typeof CURRENT_VERSION): GameConfig {
+export function checkedConfig(raw: unknown, version: 1 | typeof CURRENT_VERSION): GameConfig {
     const config = raw as { players?: unknown; rules?: unknown } | null;
     if (!Array.isArray(config?.players)) throw new SaveError('Configuration de partie invalide.');
     const players: GameConfig['players'] = (config.players as Array<Record<string, unknown> | null>).map(p => {

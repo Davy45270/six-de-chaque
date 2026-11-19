@@ -2,7 +2,7 @@
 import type { GameConfig, Session } from '@six-de-chaque/engine';
 import { stateHash } from '@six-de-chaque/engine';
 import { loadGame, saveAll } from './db';
-import { CURRENT_VERSION, migrateSave, SaveError } from './migrations';
+import { checkedConfig, CURRENT_VERSION, migrateSave, SaveError } from './migrations';
 import type { CurrentSave } from './migrations';
 
 export const SAVE_FORMAT = 'six-de-chaque-save';
@@ -15,7 +15,10 @@ export async function exportGame(db: IDBDatabase, gameId: string): Promise<strin
 }
 
 export function serializeGame(session: Session, config: GameConfig): string {
-    const out: ExportedGame = { format: SAVE_FORMAT, version: CURRENT_VERSION, config, seed: session.state.seed, snapshot: session.state, events: session.events, checksum: stateHash(session.state) };
+    const out: ExportedGame = {
+        format: SAVE_FORMAT, version: CURRENT_VERSION, config: checkedConfig(config, CURRENT_VERSION),
+        seed: session.state.seed, snapshot: session.state, events: session.events, checksum: stateHash(session.state)
+    };
     return JSON.stringify(out);
 }
 

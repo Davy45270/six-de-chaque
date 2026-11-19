@@ -1,7 +1,6 @@
 import 'fake-indexeddb/auto';
 import { expect, it } from 'vitest';
-import type { GameConfig } from '@six-de-chaque/engine';
-import { openDb, saveAll } from '../src/storage/db';
+import { openDb, saveAll, saveTurn } from '../src/storage/db';
 import { exportGame, serializeGame } from '../src/storage/transfer';
 import { configOf, playGame } from '../../../packages/engine/test/play';
 
@@ -22,25 +21,37 @@ function findSecrets(value: unknown, path = '$'): string[] {
     return [];
 }
 
-async function savedRecords(config: GameConfig): Promise<unknown[]> {
+it('the saved snapshot carries no authentication secret', async () => {
+    const config = configOf(2);
+    const authToken = 'jeton-factice';
+    const rules = { coordinateLimit: 100_000, authToken };
+    const injected = {
+        ...config, authToken, players: config.players.map(player => ({ ...player, authToken })),
+        rules
+    };
     const session = playGame(config, 'sauvegarde', { maxTurns: 6 });
-    const db = await openDb(`secrets-${Math.random()}`);
-    await saveAll(db, 'partie-1', session, config);
-    const games = await new Promise<unknown[]>((resolve, reject) => {
+    const db = await openDb('secrets');
+    const readGames = () => new Promise<unknown[]>((resolve, reject) => {
         const read = db.transaction('games').objectStore('games').getAll();
         read.onsuccess = () => { resolve(read.result); };
         read.onerror = () => { reject(read.error ?? new Error('lecture')); };
     });
-    return [games, JSON.parse(serializeGame(session, config)) as unknown, JSON.parse(await exportGame(db, 'partie-1')) as unknown];
-}
-
-it('the saved snapshot carries no authentication secret', async () => {
-    expect(findSecrets(await savedRecords(configOf(2)))).toEqual([]);
+    try {
+        await saveAll(db, 'partie-1', session, injected);
+        const savedAll = await readGames();
+        await saveTurn(db, 'partie-1', session, injected);
+        const savedTurn = await readGames();
+        expect(findSecrets({
+            savedAll, savedTurn, serialized: JSON.parse(serializeGame(session, injected)) as unknown
+        })).toEqual([]);
+        expect(findSecrets(JSON.parse(await exportGame(db, 'partie-1')) as unknown)).toEqual([]);
+    } finally {
+        db.close();
+    }
 });
 
-it('the secret detector rejects a token key, a JWT and a long hexadecimal value', async () => {
-    const leaky = { ...configOf(2), authToken: 'x' } as GameConfig;
-    expect(findSecrets(await savedRecords(leaky)).some(f => f.includes('authToken'))).toBe(true);
+it('the secret detector rejects a token key, a JWT and a long hexadecimal value', () => {
+    expect(findSecrets({ authToken: 'jeton-factice' })).toEqual(['$.authToken : clé']);
     expect(findSecrets({ note: ['eyJhbGciOiJIUzI1NiJ9', 'eyJzdWIiOiIxIn0', 'c2lnbmF0dXJl'].join('.') })).toHaveLength(1);
     expect(findSecrets({ note: 'a'.repeat(40) })).toHaveLength(1);
     expect(findSecrets({ checksum: '56f2d9312b20a13c', id: 'partie-1' })).toEqual([]);

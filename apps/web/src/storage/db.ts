@@ -2,7 +2,7 @@
 // `settings`. Un tour validé = une transaction (instantané + nouvel événement).
 import { replay, stateHash } from '@six-de-chaque/engine';
 import type { GameConfig, GameEvent, GameState, Session } from '@six-de-chaque/engine';
-import { CURRENT_VERSION, migrate, migrateSave, SaveError } from './migrations';
+import { checkedConfig, CURRENT_VERSION, migrate, migrateSave, SaveError } from './migrations';
 
 export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: typeof CURRENT_VERSION; checksum: string; updatedTurn: number }
 type StoredGame = Omit<SavedGame, 'version' | 'snapshot'> & { version: unknown; snapshot: unknown };
@@ -32,7 +32,7 @@ export function openDb(name = DB_NAME): Promise<IDBDatabase> {
 }
 
 const record = (gameId: string, session: Session, config: GameConfig): SavedGame =>
-    ({ id: gameId, config, snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
+    ({ id: gameId, config: checkedConfig(config, CURRENT_VERSION), snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
 
 export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig): Promise<void> {
     const finished = session.state.phase === 'finished';
