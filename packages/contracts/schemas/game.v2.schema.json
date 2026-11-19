@@ -46,7 +46,7 @@
       "required": ["blockedEndPolicy", "coordinateLimit"],
       "properties": {
         "blockedEndPolicy": { "const": "fullPassRound" },
-        "coordinateLimit": { "type": "integer", "minimum": 1 }
+        "coordinateLimit": { "type": "integer", "minimum": 1, "maximum": 100000 }
       }
     },
     "endReason": { "enum": [null, "out", "blocked"] }

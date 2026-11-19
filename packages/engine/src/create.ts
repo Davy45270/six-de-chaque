@@ -5,15 +5,16 @@ import { largestCompatibleGroup } from './lines';
 import { GAME_VERSION } from './types';
 import type { GameConfig, GameState, RulesConfig } from './types';
 
-export const DEFAULT_RULES: RulesConfig = { blockedEndPolicy: 'fullPassRound', coordinateLimit: 100_000 };
+const MAX_COORDINATE_LIMIT = 100_000;
+export const DEFAULT_RULES: RulesConfig = { blockedEndPolicy: 'fullPassRound', coordinateLimit: MAX_COORDINATE_LIMIT };
 
 export function createGame(config: GameConfig, seed: string): GameState {
     const { blockedEndPolicy = DEFAULT_RULES.blockedEndPolicy, coordinateLimit = DEFAULT_RULES.coordinateLimit } = config.rules ?? {};
     const rules: RulesConfig = { blockedEndPolicy, coordinateLimit };
     const policy: unknown = rules.blockedEndPolicy;
     if (policy !== 'fullPassRound') throw new Error('Politique de fin par blocage inconnue.');
-    if (!Number.isInteger(rules.coordinateLimit) || rules.coordinateLimit < 1) {
-        throw new Error('La limite de coordonnées doit être un entier supérieur ou égal à 1.');
+    if (!Number.isInteger(rules.coordinateLimit) || rules.coordinateLimit < 1 || rules.coordinateLimit > MAX_COORDINATE_LIMIT) {
+        throw new Error('La limite de coordonnées doit être un entier entre 1 et 100 000.');
     }
     const n = config.players.length;
     if (n < 2 || n > 4) throw new Error('une partie se joue de 2 à 4 joueurs');
