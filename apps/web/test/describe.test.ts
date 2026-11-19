@@ -25,7 +25,7 @@ for (const [name, pass, exchange] of [
     ['Camille', 'Camille passe.', 'Camille échange 1 tuile.']
 ] as const) {
     const setup = () => {
-        const state = stateFrom({ board: [[0, 0, 1, 1]], hands: [[[0, 0], [2, 2]], [[5, 5]]] });
+        const state = stateFrom({ board: [[0, 0, 1, 1]], hands: [[[0, 0], [2, 2]], [[5, 5]]], types: ['human', 'ai'] });
         const config = { players: state.players.map(({ id, type }, i) => ({ id, name: i === 0 ? name : 'Ordinateur', type })) };
         const exchanged = applyAction(state, { type: 'EXCHANGE', actorId: 'p1', expectedTurn: state.turnNumber, actionId: 'échange', tileIds: [tileId(0, 0, 0)] });
         if (!exchanged.ok) throw new Error(exchanged.error.detail);
@@ -48,4 +48,25 @@ it('a placement by Toi keeps the « Toi : » form', () => {
     const placed = applyAction(state, { type: 'PLACE', actorId: 'p1', expectedTurn: state.turnNumber, actionId: 'pose', placements: [{ tileId: tileId(1, 0, 0), x: 1, y: 0 }] });
     if (!placed.ok) throw new Error(placed.error.detail);
     expect(describeEvent(placed.event, config, state.tilesById)).toMatch(/^Toi : .* en 1, 0 — \d+ points?\.$/);
+});
+
+// La deuxième personne est réservée au seul joueur humain nommé « Toi ». Une IA ou un second humain qui porte ce
+// nom est un adversaire : on le nomme à la troisième personne.
+const spoken = (types: Array<'human' | 'ai'>, actor: string) => {
+    const state = stateFrom({ board: [[0, 0, 1, 1]], hands: [[[0, 0], [2, 2]], [[5, 5]]], types });
+    const config = { players: state.players.map(({ id, type, aiLevel }) => ({ id, name: 'Toi', type, ...(aiLevel ? { aiLevel } : {}) })) };
+    const exchange = { type: 'EXCHANGE' as const, actorId: actor, expectedTurn: state.turnNumber, actionId: 'échange', tileIds: [tileId(0, 0, 0)] };
+    const exchanged = applyAction({ ...state, currentPlayerIndex: actor === 'p1' ? 0 : 1 }, actor === 'p1' ? exchange : { ...exchange, tileIds: [tileId(5, 5, 0)] });
+    if (!exchanged.ok) throw new Error(exchanged.error.detail);
+    const passed = { ...exchanged.event, action: { type: 'PASS' as const, actorId: actor, expectedTurn: state.turnNumber, actionId: 'passe' } };
+    return [describeEvent(exchanged.event, config, state.tilesById), describeEvent(passed, config, state.tilesById)];
+};
+
+it('a computer named Toi is spoken of in the third person', () => {
+    expect(spoken(['human', 'ai'], 'p2')).toEqual(['Toi échange 1 tuile.', 'Toi passe.']);
+});
+
+it('two humans named Toi are spoken of in the third person', () => {
+    expect(spoken(['human', 'human'], 'p1')).toEqual(['Toi échange 1 tuile.', 'Toi passe.']);
+    expect(spoken(['human', 'human'], 'p2')).toEqual(['Toi échange 1 tuile.', 'Toi passe.']);
 });

@@ -6,7 +6,9 @@ export const playerName = (config: GameConfig, id: string): string => config.pla
 export function describeEvent(e: GameEvent, config: GameConfig, tiles: Readonly<Record<TileId, Tile>>): string {
     const who = playerName(config, e.action.actorId);
     // Le nom par défaut du joueur humain est « Toi » : « Toi passe » se lit mal, on lui parle à la deuxième personne.
-    const you = who.trim().toLowerCase() === 'toi';
+    // Seulement s'il est le seul humain de la partie : une IA ou un second humain nommé « Toi » reste un adversaire.
+    const humans = config.players.filter(p => p.type === 'human');
+    const you = who.trim().toLowerCase() === 'toi' && humans.length === 1 && humans[0]?.id === e.action.actorId;
     switch (e.action.type) {
         case 'PLACE': {
             const list = e.action.placements.map(p => { const t = tiles[p.tileId]; return `${t ? tileName(t.color, t.shape).replace(/ \(.*\)$/, '') : '?'} en ${p.x}, ${p.y}`; });
