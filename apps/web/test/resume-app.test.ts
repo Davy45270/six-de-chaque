@@ -5,10 +5,11 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { GameConfig, Session } from '@six-de-chaque/engine';
-import { createGame } from '@six-de-chaque/engine';
+import { createGame, stateHash } from '@six-de-chaque/engine';
 import { App } from '../src/App';
 import * as storage from '../src/storage/db';
 import type { BoardProps } from '../src/components';
+import { checkedConfig, CURRENT_VERSION, SaveError } from '../src/storage/migrations';
 import { exportGame, parseExport } from '../src/storage/transfer';
 import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
 
@@ -48,10 +49,15 @@ function mount(): void {
 
 it('an unreadable saved game is reported on the home screen, not silently dropped', async () => {
     const config = configOf(2);
-    const session = { state: { ...createGame(config, 'illisible'), turnNumber: -1 }, events: [] };
+    const snapshot = { ...createGame(config, 'illisible'), turnNumber: -1 };
     const db = await openDb();
     try {
-        await saveAll(db, gameId, session, config);
+        await updateSave(db, 'games', games => {
+            games.put({
+                id: gameId, config: checkedConfig(config, CURRENT_VERSION), snapshot, version: CURRENT_VERSION,
+                checksum: stateHash(snapshot), updatedTurn: snapshot.turnNumber
+            });
+        });
         await setSetting(db, 'lastGameId', gameId);
         const load = vi.spyOn(storage, 'loadGame');
         mount();
@@ -62,6 +68,20 @@ it('an unreadable saved game is reported on the home screen, not silently droppe
         expect(host.querySelector('[role="alert"]')?.textContent).toBe('La partie sauvegardée ne peut pas être relue. Elle est conservée.');
         expect(host.textContent).not.toContain('Reprendre la partie');
         expect(await listGames(db)).toEqual([{ id: gameId, updatedTurn: -1, finished: false }]);
+    } finally {
+        db.close();
+    }
+});
+
+it('saveAll refuses to write a snapshot that breaks the contract', async () => {
+    const config = configOf(2);
+    const valid = playGame(config, 'illisible', { maxTurns: 1 });
+    const invalid = { ...valid, state: { ...valid.state, turnNumber: -1 } };
+    const db = await openDb();
+    try {
+        const before = await readSave(db);
+        await expect(saveAll(db, gameId, invalid, config, { resumeOnReload: true })).rejects.toThrow(SaveError);
+        expect(await readSave(db)).toBe(before);
     } finally {
         db.close();
     }

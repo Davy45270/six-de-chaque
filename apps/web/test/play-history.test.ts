@@ -31,12 +31,25 @@ it('during play every public move stays listed beyond the twelfth', () => {
                 dispatch: vi.fn(), onMenu: vi.fn()
             }));
         });
-        const items = [...host.querySelectorAll<HTMLLIElement>('[data-testid="history"] li')];
-        expect(items.map(item => [item.value, item.textContent])).toEqual(session.events.slice().reverse().map(event =>
-            [event.seq + 1, describeEvent(event, config, view.tilesById)]));
-        const region = host.querySelector<HTMLElement>('[role="region"][aria-label="Historique des coups"]');
-        expect(region?.getAttribute('tabindex')).toBe('0');
-        expect(region?.contains(items[0]!)).toBe(true);
+        const list = host.querySelector<HTMLOListElement>('[data-testid="history"]')!;
+        const items = () => [...list.querySelectorAll('li')].map(item => [item.value, item.textContent]);
+        const moves = session.events.slice().reverse().map(event =>
+            [event.seq + 1, describeEvent(event, config, view.tilesById)]);
+        const toggle = host.querySelector<HTMLButtonElement>('button[aria-controls]')!;
+        expect(items()).toEqual(moves.slice(0, 12));
+        expect(toggle.textContent).toBe("Tout l'historique (14 coups)");
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(toggle.getAttribute('aria-controls')).toBe(list.id);
+
+        act(() => { toggle.click(); });
+        expect(items()).toEqual(moves);
+        expect(list.lastElementChild?.getAttribute('value')).toBe('1');
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(toggle.textContent).toBe('Derniers coups seulement');
+
+        act(() => { toggle.click(); });
+        expect(items()).toEqual(moves.slice(0, 12));
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
     } finally {
         act(() => { root.unmount(); });
         vi.unstubAllGlobals();

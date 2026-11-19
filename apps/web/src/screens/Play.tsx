@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cellKey } from '@six-de-chaque/engine';
-import type { GameEvent, PublicGameState, Tile } from '@six-de-chaque/engine';
+import type { PublicGameState, Tile } from '@six-de-chaque/engine';
 import { Board, TileImage, tileLabel } from '../components';
 import { currentPlayer, deadChoice, handLeft, passLegal } from '../game/controller';
 import type { UiCommand, UiState } from '../game/controller';
@@ -12,6 +12,7 @@ import { exchangeLabel } from '../game/labels';
 
 /** Commandes qui terminent le tour du joueur : valider, passer, confirmer l'échange. */
 const endsTurn = (c: UiCommand): boolean => c.t === 'validate' || c.t === 'pass' || c.t === 'confirmExchange';
+const recentMoveCount = 12;
 
 export interface PlayProps {
     ui: UiState; view: PublicGameState; viewerHand: string[] | null; highContrast: boolean; colourBlind: boolean; announce: string; zoom: { n: number; factor: number };
@@ -51,7 +52,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
         const onKey = (e: KeyboardEvent): void => {
             if (saving || e.ctrlKey || e.metaKey || e.altKey) return;
             const target = e.target instanceof Element ? e.target : null;
-            if (target?.closest('.history-scroll') || (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) return;
+            if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
             if (e.key === 'Enter' && target?.tagName === 'BUTTON') return;
             const c = keyToCommand(e.key, ui);
             if (!c) return;
@@ -66,10 +67,13 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
         return () => { window.removeEventListener('keydown', onKey); };
     }, [ui, dispatch, endTurn, refusal, saving]);
     const left = new Set(myTurn ? handLeft(ui) : viewerHand ?? []);
-    const history: GameEvent[] = ui.session.events.slice().reverse();
+    const [historyExpanded, setHistoryExpanded] = useState(false);
+    const historyId = useId();
+    const events = ui.session.events;
+    const history = events.slice(historyExpanded ? 0 : -recentMoveCount).reverse();
     const shown = (viewerHand ?? []).map(id => tiles[id]).filter((t): t is Tile => t !== undefined);
     return (
-        <main className="screen play" ref={screenRef}>
+        <main className={challenge ? 'screen play play-challenge' : 'screen play'} ref={screenRef}>
             <header className="status">
                 <ul className="players" aria-label="Scores">
                     {view.players.map((p, i) => (
@@ -135,12 +139,16 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                     </>}
                 </div>
                 {!challenge && <>
-                    <h2 className="history-title">Derniers coups</h2>
-                    <div className="history-scroll" role="region" aria-label="Historique des coups" tabIndex={0}>
-                        <ol className="history" data-testid="history" reversed>
-                            {history.map(e => <li key={e.seq} value={e.seq + 1}>{describeEvent(e, ui.config, tiles)}</li>)}
-                        </ol>
-                    </div>
+                    <h2 className="history-title">{historyExpanded ? 'Historique des coups' : 'Derniers coups'}</h2>
+                    <ol id={historyId} className="history" data-testid="history" reversed>
+                        {history.map(e => <li key={e.seq} value={e.seq + 1}>{describeEvent(e, ui.config, tiles)}</li>)}
+                    </ol>
+                    {events.length > recentMoveCount && (
+                        <button type="button" aria-expanded={historyExpanded} aria-controls={historyId}
+                            onClick={() => { setHistoryExpanded(expanded => !expanded); }}>
+                            {historyExpanded ? 'Derniers coups seulement' : `Tout l'historique (${events.length} coups)`}
+                        </button>
+                    )}
                 </>}
             </section>
             <p className="sr-only" aria-live="polite" data-testid="announce">{refused?.ui === ui ? refused.text : announce}</p>

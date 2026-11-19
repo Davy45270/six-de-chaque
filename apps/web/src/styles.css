@@ -66,20 +66,19 @@ button.link { border: none; background: none; text-decoration: underline; }
 .preview { margin: 0; min-height: 1.4em; }
 .dead { margin: 0; padding: .4em .6em; border: 2px solid var(--accent); border-radius: 8px; background: var(--papier); color: var(--encre); }
 .controls { display: flex; flex-wrap: wrap; gap: 6px; }
-.history-scroll { max-height: 12rem; min-height: 3rem; overflow-y: auto; overflow-x: hidden; overflow-wrap: anywhere; }
-.history-scroll:focus-visible { outline: 3px solid var(--encre); outline-offset: -3px; }
-.history { margin: 0; padding-left: 2.6rem; font-size: 0.9rem; color: var(--encre-douce); }
+.history { margin: 0; padding-left: 2.6rem; font-size: 0.9rem; color: var(--encre-douce); overflow-wrap: anywhere; }
 .history-title { margin: 0.3rem 0 0; font-size: 0.95rem; }
 .ranking { font-size: 1.1rem; }
 .winner { font-size: 1.2rem; font-weight: 700; }
 .replay .board { height: 50dvh; }
 @media (min-width: 900px) and (min-height: 520px) {
     /* L'écran de jeu occupe exactement la hauteur de la fenêtre : le plateau prend ce que laissent l'en-tête et la
-       ligne du tour (plus haute pendant un défi), le panneau défile s'il ne tient pas. Seulement si la fenêtre est
+       ligne du tour (plus haute pendant un défi). L'historique peut se prolonger dans la page. Seulement si la fenêtre est
        assez haute pour le plancher de 320 px (en-tête et tour d'un défi : environ 165 px) ; sinon l'écran défile. */
     .play { height: 100dvh; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto auto minmax(320px, 1fr); grid-template-areas: "status status" "turn turn" "board panel"; align-items: start; }
     .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board-wrap { grid-area: board; height: 100%; } .play .board { height: 100%; }
-    .play .panel { grid-area: panel; max-height: 100%; overflow: auto; }
+    .play .panel { grid-area: panel; }
+    .play-challenge .panel { max-height: 100%; overflow: auto; }
 }
 .challenges { max-width: 560px; }
 .challenge-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; list-style: none; }
