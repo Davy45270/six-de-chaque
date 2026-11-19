@@ -41,6 +41,7 @@ export function App({ example }: { example?: OpenExample }) {
     const [zoom, setZoom] = useState({ n: 0, factor: 1 });
     const client = useRef<AiClient | null>(null);
     const uiRef = useRef<UiState | null>(null);
+    const hintRevision = useRef(0);
     useLayoutEffect(() => { uiRef.current = ui; }, [ui]);
 
     useEffect(() => {
@@ -100,8 +101,10 @@ export function App({ example }: { example?: OpenExample }) {
         if (c.t === 'hint') {
             const me = currentPlayer(cur);
             if (!me || me.type !== 'human' || !client.current) return;
+            const revision = ++hintRevision.current;
             const gameHash = stateHash(cur.session.state);
-            const current = () => uiRef.current?.session === cur.session && uiRef.current.gameId === cur.gameId;
+            const current = () => hintRevision.current === revision
+                && uiRef.current?.session === cur.session && uiRef.current.gameId === cur.gameId;
             void client.current.request({ type: 'REQUEST_HINT', gameHash, view: projectPublicState(cur.session.state, me.id), hand: [...me.hand], playerId: me.id, level: 'intermediate', budgetNodes: 5000 }, () => current() ? gameHash : '')
                 .then(response => {
                     const now = uiRef.current;
@@ -111,6 +114,7 @@ export function App({ example }: { example?: OpenExample }) {
                 });
             return;
         }
+        if (c.t !== 'moveCursor') hintRevision.current++;
         const { state, submit: action } = reduce(cur, c);
         setUi(state);
         if (action) apply(action);
@@ -200,6 +204,7 @@ export function App({ example }: { example?: OpenExample }) {
             return <Handover name={name} onReady={() => { dispatch({ t: 'handoverDone' }); }} />;
         }
         return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} colourBlind={colourBlind} announce={announce} zoom={zoom} dispatch={dispatch} onMenu={() => {
+            hintRevision.current++;
             if (currentPlayer(ui)?.type === 'human') client.current?.cancel();
             setScreen('home');
         }} />;

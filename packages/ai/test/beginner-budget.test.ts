@@ -11,7 +11,7 @@ it('beginner finds a legal action within budget in seeded four-player games', ()
             id: `ordi-${i}`, name: `Ordinateur ${i}`, type: 'ai' as const, aiLevel: 'beginner' as const
         }))
     ] };
-    const runs = Number(process.env.AI_RUNS ?? 20);
+    const runs = 20;
     let turns = 0, loaded = 0, largestBoard = 0, maxNodes = 0;
     let maxFirstPlacementNodes = 0, maxWithoutPlacement = 0;
     for (let i = 0; i < runs; i++) {

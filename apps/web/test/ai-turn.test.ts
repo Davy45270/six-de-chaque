@@ -4,6 +4,7 @@ import type { FromWorker, ToWorker } from '@six-de-chaque/ai';
 import { createGame, getLegalMoves, replay, submit, validateAction } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 import { stateFrom } from '../../../packages/engine/test/fixtures';
+import { nextAction } from '../../../packages/engine/test/play';
 import { chooseAiMove } from '../src/game/ai-turn';
 
 const config: GameConfig = { players: [
@@ -99,4 +100,53 @@ it('the fallback exchanges one tile or passes when no placement exists', async (
         if (action.type === 'EXCHANGE') expect(action.tileIds).toEqual(state.players[0]?.hand.slice(0, 1));
         expect(validateAction(state, action).ok).toBe(true);
     }
+});
+
+it("une annulation n'est pas traitée comme une erreur de calcul", async () => {
+    const { client, sent } = setup(message => {
+        if (message.type === 'REQUEST_MOVES') queueMicrotask(() => { client.cancel(); });
+    });
+    const move = await chooseAiMove(session, client, () => true);
+    expect(sent).toMatchObject([
+        { type: 'REQUEST_MOVES', budgetNodes: 20_000 }, { type: 'CANCEL' },
+        { type: 'REQUEST_MOVES', budgetNodes: 20_000 }, { type: 'CANCEL' }
+    ]);
+    expectReplayable(move);
+});
+
+function sessionWithCollisions(): Session {
+    let current = session;
+    for (const actionId of ['repli-2', 'repli-2-']) {
+        const next = submit(current, { ...nextAction(current), actionId });
+        if (!next.result.ok) throw new Error(next.result.error.detail);
+        current = next.session;
+    }
+    return current;
+}
+
+it("un RESULT dont l'actionId est déjà au journal est refusé", async () => {
+    const current = sessionWithCollisions();
+    const duplicateId = current.events[0]!.actionId;
+    const { client, sent } = setup((message, send) => {
+        if (message.type === 'CANCEL') return;
+        createAiHost(reply => {
+            if (reply.type !== 'RESULT') throw new Error('RESULT attendu');
+            const move = { ...reply.decision.move, actionId: duplicateId };
+            expect(validateAction(current.state, move).ok).toBe(true);
+            send({ ...reply, decision: { ...reply.decision, move } });
+        }, fn => { fn(); })(message);
+    });
+    const move = await chooseAiMove(current, client, () => true);
+    expect(move).toMatchObject({ actionId: 'repli-2--' });
+    expect(sent).toMatchObject([
+        { type: 'REQUEST_MOVES', budgetNodes: 20_000 },
+        { type: 'REQUEST_MOVES', budgetNodes: 5_000 }
+    ]);
+});
+
+it("le repli résout plusieurs collisions d'actionId", async () => {
+    const current = sessionWithCollisions();
+    const move = await chooseAiMove(current, null, () => true);
+    expect(move).toMatchObject({ actionId: 'repli-2--' });
+    expect(submit(current, move!).result.ok).toBe(true);
 });
