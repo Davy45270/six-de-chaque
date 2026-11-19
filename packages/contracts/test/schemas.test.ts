@@ -112,6 +112,19 @@ describe('game action schema', () => {
 });
 
 describe('engine snapshots', () => {
+    it('createGame refuses a coordinate limit the save contract rejects', () => {
+        const players = [{ id: 'p1', name: 'Alice', type: 'human' as const }, { id: 'p2', name: 'Bob', type: 'human' as const }];
+        for (const coordinateLimit of [0, -1, 1.5]) {
+            expect(() => createGame({ players, rules: { coordinateLimit } }, 'graine')).toThrow(/limite de coordonnées/i);
+        }
+        const limited = createGame({ players, rules: { coordinateLimit: 1 } }, 'graine');
+        const standard = createGame({ players }, 'graine');
+        expect(limited.config.coordinateLimit).toBe(1);
+        expect(standard.config.coordinateLimit).toBe(100_000);
+        expect(validateGameSnapshot(limited).ok).toBe(true);
+        expect(validateGameSnapshot(standard).ok).toBe(true);
+    });
+
     it('v2 snapshot from createGame validates', () => {
         for (const n of [2, 4]) {
             const players = [{ id: 'h', name: 'Humain', type: 'human' as const }, ...Array.from({ length: n - 1 }, (_, i) => ({ id: `o${i}`, name: 'Ordinateur', type: 'ai' as const, aiLevel: (['intermediate', 'advanced', 'expert'] as const)[i % 3]! }))];

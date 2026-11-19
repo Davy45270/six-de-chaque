@@ -11,6 +11,9 @@ export function createGame(config: GameConfig, seed: string): GameState {
     const rules = { ...DEFAULT_RULES, ...config.rules };
     const policy: unknown = rules.blockedEndPolicy;
     if (policy !== 'fullPassRound') throw new Error('Politique de fin par blocage inconnue.');
+    if (!Number.isInteger(rules.coordinateLimit) || rules.coordinateLimit < 1) {
+        throw new Error('La limite de coordonnées doit être un entier supérieur ou égal à 1.');
+    }
     const n = config.players.length;
     if (n < 2 || n > 4) throw new Error('une partie se joue de 2 à 4 joueurs');
     if (!config.players.some(p => p.type === 'human')) throw new Error('il faut au moins un joueur humain');
