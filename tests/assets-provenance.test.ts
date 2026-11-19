@@ -1,7 +1,7 @@
 // Provenance des images et des sons : chaque fichier binaire ou image du dépôt sort d'un générateur du dépôt.
 // Aucune police externe, aucune ressource tierce dans la page.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import { inflateSync } from 'node:zlib';
@@ -18,8 +18,41 @@ const PROVENANCE: Record<string, { generator: string; mentions: string[] }> = {
 };
 
 // Fichiers suivis, plus les fichiers nouveaux non ignorés : une image ajoutée se voit avant même son commit.
-const repositoryFiles = (): string[] => execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8' })
+const gitFiles = (): string[] => execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
     .split('\0').filter(file => file && existsSync(file));
+
+// Sans dépôt git (copie « git archive » du créneau e2e) : parcours du système de fichiers depuis la racine, hors
+// dossiers produits et hors motifs de .gitignore, lu simplement : une ligne = un nom de dossier (« x/ ») ou un
+// motif de nom de fichier (« * » pour n'importe quels caractères).
+const ALWAYS_SKIPPED = ['node_modules/', 'dist/', '.git/', '.npm-cache/', '.pw-browsers/', 'test-results/', 'playwright-report/'];
+const pattern = (glob: string): RegExp => new RegExp(`^${glob.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
+function ignoreRules(): { dirs: RegExp[]; files: RegExp[] } {
+    const lines = existsSync('.gitignore') ? readFileSync('.gitignore', 'utf8').split('\n') : [];
+    const rules = [...ALWAYS_SKIPPED, ...lines].map(line => line.trim()).filter(line => line && !line.startsWith('#')).map(line => line.replace(/^\//, ''));
+    return { dirs: rules.map(rule => pattern(rule.replace(/\/$/, ''))), files: rules.filter(rule => !rule.endsWith('/')).map(pattern) };
+}
+function walkedFiles(): string[] {
+    const { dirs, files } = ignoreRules();
+    const out: string[] = [];
+    const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir || '.', { withFileTypes: true })) {
+            const path = dir ? `${dir}/${entry.name}` : entry.name;
+            if (entry.isDirectory()) { if (!dirs.some(d => d.test(entry.name))) walk(path); }
+            else if (entry.isFile() && !files.some(f => f.test(entry.name))) out.push(path);
+        }
+    };
+    walk('');
+    return out;
+}
+const hasGit = (): boolean => spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' }).status === 0;
+const repositoryFiles = (): string[] => hasGit() ? gitFiles() : walkedFiles();
+
+it('without git, walking the file system finds the same images as git', () => {
+    const images = (list: string[]): string[] => list.filter(file => ASSET.test(file)).sort();
+    const walked = images(walkedFiles());
+    expect(walked.length, 'aucune image trouvée par le parcours').toBeGreaterThan(0);
+    if (hasGit()) expect(walked).toEqual(images(gitFiles()));
+});
 
 it('every image in the repository comes from a generator in the repository', () => {
     const assets = repositoryFiles().filter(file => ASSET.test(file)).sort();
