@@ -5,6 +5,9 @@ import { cellKey, tileId, validateAction } from '@six-de-chaque/engine';
 import type { GameAction, Tile } from '@six-de-chaque/engine';
 import { stateFrom } from '../packages/engine/test/fixtures';
 
+// Cible : moins de 10 ms par validation (médiane des 15 passes rapportée au nombre de coups).
+const LIMIT_MS_PER_VALIDATION = 10;
+
 it.each([108, 200])('validateAction × 1000 on a %i-tile board (median reported)', size => {
     const base = stateFrom({ hands: [[[0, 0]], [[1, 1]]], phase: 'playing' });
     const board: Record<string, string> = {};
@@ -35,4 +38,6 @@ it.each([108, 200])('validateAction × 1000 on a %i-tile board (median reported)
     const microsPerAction = median * 1000 / actions.length;
     console.log(`${cpus()[0]?.model ?? 'CPU inconnu'} | ${size} tuiles | 1 000 coups en ${median.toFixed(2)} ms (médiane), ${microsPerAction.toFixed(1)} µs par coup, ${accepted} acceptés`);
     expect(accepted).toBeGreaterThan(0);
+    const msPerAction = median / actions.length;
+    expect(msPerAction, `${msPerAction.toFixed(4)} ms par validation (médiane)`).toBeLessThan(LIMIT_MS_PER_VALIDATION);
 });
