@@ -60,14 +60,18 @@ button.link { border: none; background: none; text-decoration: underline; }
 .preview { margin: 0; min-height: 1.4em; }
 .dead { margin: 0; padding: .4em .6em; border: 2px solid var(--accent); border-radius: 8px; background: var(--papier); color: var(--encre); }
 .controls { display: flex; flex-wrap: wrap; gap: 6px; }
-.history { margin: 0; padding-left: 1.2rem; max-height: 9rem; overflow: auto; font-size: 0.9rem; color: var(--encre-douce); }
+/* Douze coups au plus : la liste prend sa hauteur entière, aucune ligne n'est coupée. Numéros de 4 chiffres. */
+.history { margin: 0; padding-left: 2.6rem; font-size: 0.9rem; color: var(--encre-douce); }
 .history-title { margin: 0.3rem 0 0; font-size: 0.95rem; }
 .ranking { font-size: 1.1rem; }
 .winner { font-size: 1.2rem; font-weight: 700; }
 .replay .board { height: 50dvh; }
 @media (min-width: 900px) {
-    .play { grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "status status" "turn turn" "board panel"; align-items: start; }
-    .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board-wrap { grid-area: board; } .play .board { height: calc(100dvh - 140px); } .play .panel { grid-area: panel; }
+    /* L'écran de jeu occupe exactement la hauteur de la fenêtre : le plateau prend ce que laissent l'en-tête et la
+       ligne du tour (plus haute pendant un défi), le panneau défile s'il ne tient pas. */
+    .play { height: 100dvh; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto auto minmax(320px, 1fr); grid-template-areas: "status status" "turn turn" "board panel"; align-items: start; }
+    .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board-wrap { grid-area: board; height: 100%; } .play .board { height: 100%; }
+    .play .panel { grid-area: panel; max-height: 100%; overflow: auto; }
 }
 .challenges { max-width: 560px; }
 .challenge-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; list-style: none; }

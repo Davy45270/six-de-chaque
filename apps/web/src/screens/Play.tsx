@@ -117,8 +117,9 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                     </>}
                 </div>
                 {!challenge && <><h2 className="history-title">Derniers coups</h2>
-                <ol className="history" data-testid="history">
-                    {history.map(e => <li key={e.seq}>{describeEvent(e, ui.config, tiles)}</li>)}
+                {/* Le plus récent en premier, chaque coup avec son numéro dans la partie (seq part de 0). */}
+                <ol className="history" data-testid="history" reversed>
+                    {history.map(e => <li key={e.seq} value={e.seq + 1}>{describeEvent(e, ui.config, tiles)}</li>)}
                 </ol></>}
             </section>
             <p className="sr-only" aria-live="polite" data-testid="announce">{announce}</p>
