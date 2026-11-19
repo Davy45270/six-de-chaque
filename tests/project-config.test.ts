@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, mkdtempSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -122,4 +122,17 @@ it('package is reproducible', () => {
     } finally {
         rmSync(root, { recursive: true, force: true });
     }
+});
+
+it('stryker can start with the installed TypeScript', async () => {
+    // Hors mode « inPlace », Stryker réécrit le tsconfig désigné par `tsconfigFile` via `ts.parseConfigFileTextToJson`,
+    // que TypeScript 7 (compilateur natif) n'expose plus. Ce fichier ne doit alors désigner aucun fichier du projet.
+    const stryker = JSON.parse(readFileSync('stryker.config.json', 'utf8')) as { tsconfigFile?: string; inPlace?: boolean; vitest?: { dir?: string } };
+    // Vitest applique ses motifs `include` relativement à `vitest.dir` : les tests du moteur doivent rester trouvables.
+    const found = globSync(vitest.test?.include ?? [], { cwd: stryker.vitest?.dir ?? '.' });
+    expect(found.filter(file => file.startsWith('packages/engine/test/')).length).toBeGreaterThan(0);
+    const { default: ts } = (await import('typescript')) as unknown as { default: Record<string, unknown> };
+    if (typeof ts.parseConfigFileTextToJson === 'function' || stryker.inPlace === true) return;
+    const tsconfigFile = stryker.tsconfigFile ?? 'tsconfig.json';
+    expect(existsSync(resolve(tsconfigFile)), tsconfigFile).toBe(false);
 });
