@@ -6,7 +6,7 @@ import { checkedConfig, CURRENT_VERSION, migrate, migrateSave, projectSnapshot, 
 
 export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: typeof CURRENT_VERSION; checksum: string; updatedTurn: number }
 type StoredGame = Omit<SavedGame, 'version' | 'snapshot'> & { version: unknown; snapshot: unknown };
-export type SettingKey = 'highContrast' | 'colourBlind' | 'lastGameId' | 'completedChallenges';
+export type SettingKey = 'highContrast' | 'colourBlind' | 'lastGameId' | 'completedChallenges' | 'lastFinishedGameId';
 type StoredEvent = GameEvent & { gameId: string };
 
 export const DB_NAME = 'six-de-chaque';
@@ -79,6 +79,7 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
     }
     if (finished) {
         const settings = tx.objectStore('settings');
+        settings.put(gameId, 'lastFinishedGameId');
         const lastGameId = settings.get('lastGameId') as IDBRequest<string | undefined>;
         lastGameId.onsuccess = () => {
             if (lastGameId.result === gameId) settings.delete('lastGameId');

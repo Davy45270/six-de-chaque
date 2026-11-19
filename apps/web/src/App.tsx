@@ -5,12 +5,13 @@ import type { GameAction, GameConfig, GameState, Session } from '@six-de-chaque/
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
 import { chooseAiMove } from './game/ai-turn';
-import { resumeOffer, savedResumeStatus } from './game/resume';
+import { loadLastFinishedGame, resumeOffer, savedResumeStatus } from './game/resume';
 import type { SavedResume } from './game/resume';
 import type { UiCommand, UiState } from './game/controller';
 import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
 import { completeChallenge, getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting, StaleGameError } from './storage/db';
+import type { LoadedGame } from './storage/db';
 import { importGame, serializeGame } from './storage/transfer';
 import { addCompleted, readAppearance, readCompleted, writeAppearance } from './storage/fallback';
 import type { AppearanceKey } from './storage/fallback';
@@ -23,7 +24,7 @@ import { Replay } from './screens/Replay';
 import { About } from './screens/About';
 import { Challenges } from './screens/Challenges';
 
-type Screen = 'home' | 'setup' | 'play' | 'end' | 'replay' | 'about' | 'challenges';
+type Screen = 'home' | 'setup' | 'play' | 'end' | 'replay' | 'last-replay' | 'about' | 'challenges';
 const AI_DELAY_MS = 600;
 function newSeed(): string {
     const seed = new URLSearchParams(location.search).get('seed');
@@ -43,6 +44,7 @@ export function App({ example }: { example?: OpenExample }) {
     const [colourBlind, setColourBlind] = useState(() => readAppearance('colourBlind') ?? false);
     const knownAppearance = useRef({ highContrast: readAppearance('highContrast') !== undefined, colourBlind: readAppearance('colourBlind') !== undefined });
     const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set(readCompleted()));
+    const [lastFinished, setLastFinished] = useState<LoadedGame | null>(null);
     const [resume, setResume] = useState<SavedResume | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [announce, setAnnounce] = useState('');
@@ -86,6 +88,14 @@ export function App({ example }: { example?: OpenExample }) {
             return undefined;
         }
     }, []);
+    useEffect(() => {
+        if (screen !== 'home') return undefined;
+        let active = true;
+        void dbReady.then(loadLastFinishedGame, () => null).then(game => {
+            if (active) setLastFinished(game);
+        });
+        return () => { active = false; };
+    }, [dbReady, screen]);
     useLayoutEffect(() => { document.documentElement.classList.toggle('hc', highContrast); }, [highContrast]);
 
     const open = useCallback((session: Session, config: GameConfig, gameId: string) => {
@@ -110,6 +120,7 @@ export function App({ example }: { example?: OpenExample }) {
             try {
                 await saveTurn(await dbReady, cur.gameId, session, cur.config, unsavedSince.current ?? cur.session.state);
                 unsavedSince.current = null;
+                if (session.state.phase === 'finished') setLastFinished(null);
                 setSaveFailure(null);
             } catch (error) {
                 if (error instanceof StaleGameError) {
@@ -226,12 +237,11 @@ export function App({ example }: { example?: OpenExample }) {
         setCompleted(previous => new Set([...previous, id]));
         withDb(d => completeChallenge(d, id));
     };
-    const doExport = (): void => {
-        if (!ui) return;
-        const json = serializeGame(ui.session, ui.config);
+    const doExport = (session: Session, config: GameConfig): void => {
+        const json = serializeGame(session, config);
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-        a.download = `six-de-chaque-${ui.session.state.turnNumber}.json`;
+        a.download = `six-de-chaque-${session.state.turnNumber}.json`;
         a.click();
         setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
     };
@@ -244,8 +254,13 @@ export function App({ example }: { example?: OpenExample }) {
         onComplete={markComplete} onHome={() => { setScreen('home'); }} />;
     if (screen === 'setup') return <Setup onStart={startNew} onBack={() => { setScreen('home'); }} />;
     if (screen === 'about') return <About onBack={() => { setScreen('home'); }} />;
-    if (screen === 'end' && ui) return <End saveAlert={saveAlert} state={ui.session.state} config={ui.config} onReplay={() => { setScreen('replay'); }} onExport={doExport} onNew={() => { setScreen('setup'); }} onHome={() => { setScreen('home'); }} />;
-    if (screen === 'replay' && ui && ui.session.state.phase === 'finished') return <Replay config={ui.config} seed={ui.session.state.seed} events={ui.session.events} highContrast={highContrast} colourBlind={colourBlind} onBack={() => { setScreen('end'); }} />;
+    if (screen === 'end' && ui) return <End saveAlert={saveAlert} state={ui.session.state} config={ui.config} onReplay={() => { setScreen('replay'); }} onExport={() => { doExport(ui.session, ui.config); }} onNew={() => { setScreen('setup'); }} onHome={() => { setScreen('home'); }} />;
+    const replayGame = screen === 'last-replay' ? lastFinished : screen === 'replay' ? ui : null;
+    if (replayGame?.session.state.phase === 'finished') {
+        const { session, config } = replayGame;
+        return <Replay config={config} seed={session.state.seed} events={session.events} highContrast={highContrast} colourBlind={colourBlind}
+            onExport={() => { doExport(session, config); }} onBack={() => { setScreen(screen === 'last-replay' ? 'home' : 'end'); }} />;
+    }
     if (screen === 'play' && ui && view) {
         if (ui.handoverFor) {
             const name = ui.config.players.find(p => p.id === ui.handoverFor)?.name ?? '';
@@ -261,6 +276,7 @@ export function App({ example }: { example?: OpenExample }) {
     const offer = resumeOffer(standardUi, resume);
     return <Home canResume={Boolean(offer)} resumeNote={offer?.source === 'saved' ? offer.save.note : null} highContrast={highContrast} colourBlind={colourBlind} message={saveMessage ?? message}
         onNew={() => { setScreen('setup'); }}
+        onReplayLast={lastFinished ? () => { setScreen('last-replay'); } : undefined}
         onChallenges={() => { setScreen('challenges'); }}
         onResume={() => {
             if (offer?.source === 'current') {

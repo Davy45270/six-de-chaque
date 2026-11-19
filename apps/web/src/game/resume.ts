@@ -1,3 +1,4 @@
+import { getSetting, loadGame } from '../storage/db';
 import type { LoadedGame } from '../storage/db';
 import type { UiState } from './controller';
 
@@ -24,4 +25,15 @@ export function savedResumeStatus(
     if (loaded.session.state.phase === 'finished') return { resume: null, message: null };
     const note = loaded.recovered ? 'La reprise restaurera la partie depuis son journal de coups.' : null;
     return { resume: { id, note }, message: null };
+}
+
+export async function loadLastFinishedGame(db: IDBDatabase): Promise<LoadedGame | null> {
+    try {
+        const id = await getSetting<unknown>(db, 'lastFinishedGameId');
+        if (typeof id !== 'string') return null;
+        const loaded = await loadGame(db, id, 'preview');
+        return loaded.consistent && !loaded.recovered && loaded.session.state.phase === 'finished' ? loaded : null;
+    } catch {
+        return null;
+    }
 }

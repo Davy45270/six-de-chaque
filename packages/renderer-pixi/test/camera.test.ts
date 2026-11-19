@@ -34,3 +34,28 @@ describe('camera', () => {
         expect(cellToScreen(c, 0, 0, CELL)).toEqual({ px: 20, py: -10 });
     });
 });
+
+const wideBoard = { '-7:-6': 't-000', '9:-6': 't-001', '-7:7': 't-002', '9:7': 't-003' };
+
+it('fitBoard keeps every tile of a 17 by 14 board inside a 366 by 364 view', () => {
+    const camera = fitBoard(wideBoard, 366, 364, CELL);
+    const topLeft = cellToScreen(camera, -9, -8, CELL);
+    const bottomRight = cellToScreen(camera, 12, 10, CELL);
+    expect(topLeft.px).toBeGreaterThanOrEqual(-1e-9);
+    expect(topLeft.py).toBeGreaterThanOrEqual(-1e-9);
+    expect(bottomRight.px).toBeLessThanOrEqual(366 + 1e-9);
+    expect(bottomRight.py).toBeLessThanOrEqual(364 + 1e-9);
+    expect(fitBoard(wideBoard, 1, 1, CELL).zoom).toBe(0.1);
+});
+
+it('from a fit below the minimum zoom the user can zoom in step by step up to a comfortable reading zoom of 1', () => {
+    let camera = fitBoard(wideBoard, 366, 364, CELL);
+    expect(camera.zoom).toBeLessThan(0.35);
+    for (let step = 0; step < 30 && camera.zoom < 1; step++) {
+        const next = zoomAt(camera, 1.2, 183, 182);
+        expect(next.zoom).toBeGreaterThan(camera.zoom);
+        expect(next.zoom).toBeCloseTo(camera.zoom * 1.2);
+        camera = next;
+    }
+    expect(camera.zoom).toBeGreaterThanOrEqual(1);
+});

@@ -641,3 +641,77 @@ it('the initial save alert names the game, not a turn', async () => {
     expect(host.querySelector('[role="alert"]')?.textContent)
         .toBe('La partie n’a pas pu être sauvegardée. Elle continue, mais un rechargement la perdrait.');
 });
+
+it('after finishing a game and going home, the last finished game can still be replayed, also after a reload', async () => {
+    const { replayExample } = await import('../src/game/examples');
+    const { default: examples } = await import('../data/exemples.json');
+    const { replay } = await import('@six-de-chaque/engine');
+    const { ui: { config, session: finished } } = replayExample('fin-main-vide', examples as import('../src/game/examples').ExampleData);
+    const events = finished.events.slice(0, -1);
+    const beforeFinish = { state: replay(config, finished.state.seed, events), events };
+    const db = await openDb();
+    try {
+        await saveAll(db, gameId, beforeFinish, config, { resumeOnReload: true });
+        await resumeSavedGame();
+        const action = finished.events.at(-1)?.action;
+        if (action?.type !== 'PLACE') throw new Error('Pose finale attendue');
+        for (const { tileId, x, y } of action.placements) {
+            const tile = host.querySelector<HTMLButtonElement>(`button[data-tile="${tileId}"]`);
+            if (!tile || !board.onTap) throw new Error('Galet et plateau attendus');
+            act(() => { tile.click(); });
+            act(() => { board.onTap?.(x, y); });
+        }
+        clickButton('Valider');
+        await act(async () => {
+            await vi.waitFor(async () => expect((await loadGame(db, gameId)).session.state.phase).toBe('finished'));
+        });
+        expect(host.querySelector('h1')?.textContent).toBe('Partie terminée');
+        const load = vi.spyOn(storage, 'loadGame');
+        load.mockClear();
+        clickButton('Accueil');
+        const checkReplay = async () => {
+            await act(async () => {
+                await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.anything(), gameId, 'preview'));
+                await load.mock.results[0]?.value;
+            });
+            expect(host.textContent).toContain('Revoir la dernière partie');
+            expect(host.textContent).not.toContain('Reprendre la partie');
+            clickButton('Revoir la dernière partie');
+            expect(host.querySelector('h1')?.textContent).toBe('Rejeu');
+            expect(host.textContent).toContain('Coup 107 sur 107');
+            expect(host.textContent).toContain('Exporter la partie');
+        };
+        await checkReplay();
+        expect(await getSetting(db, 'lastGameId')).toBeUndefined();
+        expect(await getSetting(db, 'lastFinishedGameId')).toBe(gameId);
+
+        act(() => { root.unmount(); });
+        root = createRoot(host);
+        load.mockClear();
+        mount();
+        await checkReplay();
+    } finally {
+        db.close();
+    }
+});
+
+it('an unreadable last finished game offers no replay button', async () => {
+    const db = await openDb();
+    try {
+        const snapshot = { ...createGame(configOf(2), 'fin-illisible'), phase: 'finished', turnNumber: -1 };
+        await updateSave(db, 'games', games => {
+            games.put({ id: gameId, snapshot, version: CURRENT_VERSION, updatedTurn: -1 });
+        });
+        await setSetting(db, 'lastFinishedGameId', gameId);
+        const load = vi.spyOn(storage, 'loadGame');
+        mount();
+        await act(async () => {
+            await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.anything(), gameId, 'preview'));
+            await expect(load.mock.results[0]?.value).rejects.toThrow();
+        });
+        expect(host.textContent).not.toContain('Revoir la dernière partie');
+        expect(host.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+        db.close();
+    }
+});

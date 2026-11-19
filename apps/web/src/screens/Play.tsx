@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cellKey } from '@six-de-chaque/engine';
 import type { PublicGameState, Tile } from '@six-de-chaque/engine';
-import { Board, TileImage, tileLabel } from '../components';
+import { Board, TileImage, tileLabel, ZoomControls } from '../components';
 import { currentPlayer, deadChoice, handLeft, passLegal } from '../game/controller';
 import type { UiCommand, UiState } from '../game/controller';
 import { keyToCommand } from '../game/keyboard';
@@ -95,10 +95,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
             <div className="board-wrap">
                 <Board board={view.board} ghost={ui.ghost} cursor={myTurn ? ui.cursor : null} tiles={tiles} highContrast={highContrast} colourBlind={colourBlind} zoom={zoom}
                     onTap={(x, y) => { dispatch({ t: 'placeAt', x, y }); }} label={`Plateau, ${Object.keys(view.board).length} tuiles posées. ${myTurn ? `Case du curseur ${ui.cursor.x}, ${ui.cursor.y}, ${cursorContent}.` : ''}`} />
-                <div className="zoom" role="group" aria-label="Zoom du plateau">
-                    <button type="button" aria-label="Zoomer" onClick={() => { dispatch({ t: 'zoom', factor: 1.2 }); }}>+</button>
-                    <button type="button" aria-label="Dézoomer" onClick={() => { dispatch({ t: 'zoom', factor: 1 / 1.2 }); }}>−</button>
-                </div>
+                <ZoomControls onZoom={factor => { dispatch({ t: 'zoom', factor }); }} />
             </div>
             <section className="panel">
                 <p className="cursor" data-testid="cursor">Case {ui.cursor.x}, {ui.cursor.y}</p>
