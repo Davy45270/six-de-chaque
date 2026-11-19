@@ -6,6 +6,8 @@ import { configOf, playGame } from './play';
 const RUNS = Number(process.env.T17_RUNS ?? 20);
 describe('replay', () => {
     it(`T17 replaying the log gives the same final hash (${RUNS} games)`, () => {
+        expect(RUNS, 'T17_RUNS doit valoir au moins 1').toBeGreaterThanOrEqual(1);
+        let replayed = 0;
         for (let i = 0; i < RUNS; i++) {
             const config = configOf(2 + (i % 3));
             const seed = `t17-${i}`;
@@ -13,7 +15,9 @@ describe('replay', () => {
             expect(a.state.phase).toBe('finished');
             expect(stateHash(replay(config, seed, a.events))).toBe(stateHash(a.state));
             expect(a.events[a.events.length - 1]?.stateHash).toBe(stateHash(a.state));
+            replayed++;
         }
+        expect(replayed, 'parties rejouées').toBe(RUNS);
     }, 600_000);
     it('replay throws on a broken hash chain', () => {
         const config = configOf(2);
