@@ -33,6 +33,16 @@ describe('palette and art', () => {
             expect(new Set(letters).size).toBe(6);
         }
     });
+    it('each colour has its own pattern drawing, whatever the hue', () => {
+        // La couleur remplacée par un jeton : seul reste le dessin du motif (plein, rayé, pointillé, quadrillé,
+        // anneau, chevron). Deux couleurs au même motif ne se distingueraient plus que par la teinte.
+        for (const highContrast of [false, true]) {
+            const colours = highContrast ? COLORS_HIGH_CONTRAST : COLORS;
+            const drawings = colours.map((hex, c) => tileSvg(c, 0, { highContrast }).split(hex).join('COULEUR'));
+            for (const [c, d] of drawings.entries()) expect(d, `couleur ${c}`).toContain('COULEUR');
+            expect(new Set(drawings).size).toBe(6);
+        }
+    });
     it('every tile has a distinct drawing and a name with shape, colour and pattern', () => {
         const all = new Set<string>();
         for (let c = 0; c < 6; c++) for (let s = 0; s < 6; s++) { all.add(tileSvg(c, s)); all.add(tileSvg(c, s, { highContrast: true })); }
