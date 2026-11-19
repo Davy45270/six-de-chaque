@@ -59,6 +59,7 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
             journal.add({ ...event, gameId } satisfies StoredEvent);
         }
     } else {
+        journal.delete(IDBKeyRange.bound([gameId, 0], [gameId, Number.MAX_SAFE_INTEGER]));
         for (const event of session.events) {
             journal.put({ ...event, gameId } satisfies StoredEvent);
         }

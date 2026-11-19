@@ -97,3 +97,24 @@ describe('write conflicts', () => {
         expect(stateHash(loaded.session.state)).toBe(stateHash(base.state));
     });
 });
+
+it('a missing game record with an orphan journal is rewritten as one consistent save', async () => {
+    const db = await fresh();
+    const seed = 'journal-orphelin';
+    const orphan = playGame(config, seed, { maxTurns: 3 });
+    await saveAll(db, 'g', orphan, config);
+    const tx = db.transaction('games', 'readwrite');
+    tx.objectStore('games').delete('g');
+    await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => { resolve(); };
+        tx.onabort = () => { reject(tx.error ?? new Error('Suppression annulée')); };
+    });
+    expect(await rawEvents(db, 'g')).toHaveLength(3);
+
+    const initial = playGame(config, seed, { maxTurns: 0 });
+    const first = playGame(config, seed, { maxTurns: 1 });
+    await saveTurn(db, 'g', first, config, initial.state);
+
+    expect(await rawEvents(db, 'g')).toEqual(first.events.map(event => ({ ...event, gameId: 'g' })));
+    expect(await loadGame(db, 'g', 'resume')).toMatchObject({ consistent: true, session: first });
+});
