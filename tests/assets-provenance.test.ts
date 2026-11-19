@@ -70,8 +70,8 @@ it('every image in the repository comes from a generator in the repository', () 
     expect(html, 'ressource tierce dans la page').not.toMatch(/(src|href)\s*=\s*["']?(https?:)?\/\//i);
 });
 
-/** Décode un PNG 8 bits non entrelacé (RVB ou RVBA) en pixels RVB : largeur, hauteur, octets. */
-function decodePng(png: Buffer): { width: number; height: number; rgb: Buffer } {
+/** Décode un PNG 8 bits non entrelacé (RVB ou RVBA) en pixels RVBA (alpha 255 pour un PNG RVB). */
+function decodePng(png: Buffer): { width: number; height: number; rgba: Buffer } {
     const width = png.readUInt32BE(16), height = png.readUInt32BE(20), depth = png[24], type = png[25], interlace = png[28];
     if (depth !== 8 || (type !== 2 && type !== 6) || interlace !== 0) throw new Error(`PNG non pris en charge : ${depth} bits, type ${type}`);
     const chunks: Buffer[] = [];
@@ -93,51 +93,69 @@ function decodePng(png: Buffer): { width: number; height: number; rgb: Buffer } 
             out[y * stride + x] = (v + pred) & 0xff;
         }
     }
-    const rgb = Buffer.alloc(width * height * 3);
-    for (let i = 0; i < width * height; i++) out.copy(rgb, i * 3, i * bpp, i * bpp + 3);
-    return { width, height, rgb };
+    const rgba = Buffer.alloc(width * height * 4, 0xff);
+    for (let i = 0; i < width * height; i++) out.copy(rgba, i * 4, i * bpp, i * bpp + bpp);
+    return { width, height, rgba };
 }
 
 const ICONS = Object.keys(PROVENANCE).filter(file => file.startsWith('apps/web/public/icons/'));
 
+/** Lance le générateur d'icônes dans `cwd` ; avec `fakeRsvg`, un faux rsvg-convert y recueille le SVG de chaque icône. */
+function runIconGenerator(cwd: string, fakeRsvg: boolean): void {
+    mkdirSync(cwd, { recursive: true });
+    const env = { ...process.env };
+    if (fakeRsvg) {
+        const bin = join(cwd, '.bin');
+        mkdirSync(bin);
+        writeFileSync(join(bin, 'rsvg-convert'), '#!/bin/sh\nfor last; do :; done\ncat > "$last.svg"\n');
+        chmodSync(join(bin, 'rsvg-convert'), 0o755);
+        env.PATH = `${bin}${delimiter}${env.PATH ?? ''}`;
+    }
+    execFileSync(process.execPath, [resolve('scripts/make-icons.js')], { cwd, env, stdio: 'pipe' });
+}
+
+// Points pris DANS la lune (grille 24 × 24 du glyphe), à plus d'une unité de chacun de ses bords : le disque
+// extérieur de rayon 9,5 centré vers (13,5 ; 11,9) moins le disque de rayon 8,05 centré en (18 ; 9,75).
+const MOON_INSIDE: ReadonlyArray<readonly [number, number]> = [[6, 12], [7, 16], [8, 7]];
+
 // Les icônes suivies sont exactement ce que produit le générateur du dépôt, relancé dans un dossier temporaire.
-// Avec rsvg-convert : comparaison octet par octet (pixel par pixel si l'encodage diffère). Sans lui (image de CI) :
-// un faux rsvg-convert recueille le SVG produit, et les pixels du PNG suivi doivent porter ses couleurs de fond
-// (sable autour, galet clair hors du glyphe).
+// Toujours : un faux rsvg-convert recueille le SVG produit, et les pixels du PNG suivi doivent porter ses couleurs,
+// alpha compris (sable autour, galet clair hors du glyphe, couleur de la lune dans la lune). Avec rsvg-convert en
+// plus : comparaison octet par octet (pixel par pixel, alpha compris, si l'encodage diffère).
 it('the tracked icons are what the icon generator in the repository produces', () => {
     const work = mkdtempSync(join(tmpdir(), 'six-icones-'));
     try {
-        const real = spawnSync('rsvg-convert', ['--version']).status === 0;
-        const env = { ...process.env };
-        if (!real) {
-            const bin = join(work, 'bin');
-            mkdirSync(bin);
-            writeFileSync(join(bin, 'rsvg-convert'), '#!/bin/sh\nfor last; do :; done\ncat > "$last.svg"\n');
-            chmodSync(join(bin, 'rsvg-convert'), 0o755);
-            env.PATH = `${bin}${delimiter}${env.PATH ?? ''}`;
-        }
-        execFileSync(process.execPath, [resolve('scripts/make-icons.js')], { cwd: work, env, stdio: 'pipe' });
+        const fake = join(work, 'faux');
+        runIconGenerator(fake, true);
         for (const file of ICONS) {
-            const tracked = readFileSync(file);
-            if (real) {
-                const made = readFileSync(join(work, file));
-                if (made.equals(tracked)) continue;
-                const a = decodePng(made), b = decodePng(tracked);
-                expect([b.width, b.height], `${file} : dimensions`).toEqual([a.width, a.height]);
-                expect(b.rgb.equals(a.rgb), `${file} diffère de la sortie du générateur`).toBe(true);
-                continue;
-            }
-            const svg = readFileSync(join(work, `${file}.svg`), 'utf8');
+            const svg = readFileSync(join(fake, `${file}.svg`), 'utf8');
             const sand = /<rect width="100" height="100" fill="(#[0-9A-Fa-f]{6})"\/>/.exec(svg)?.[1];
             const pebble = /<rect x="10" y="10" width="80" height="80" rx="24" fill="(#[0-9A-Fa-f]{6})"/.exec(svg)?.[1];
             const shift = /<g transform="translate\(([\d.]+) [\d.]+\) scale\(([\d.]+)\)">/.exec(svg);
-            if (!sand || !pebble || !shift) throw new Error(`${file} : SVG du générateur illisible`);
-            const { width, rgb } = decodePng(tracked);
-            const at = (x: number, y: number): string => { const i = (Math.floor(y * width / 100) * width + Math.floor(x * width / 100)) * 3; return `#${[0, 1, 2].map(k => rgb[i + k]!.toString(16).padStart(2, '0')).join('').toUpperCase()}`; };
-            // Coin : fond ; (50, 14) du motif : dans le galet, au-dessus du glyphe.
+            const glyph = /<g transform="translate\(([\d.]+) ([\d.]+)\) scale\(([\d.]+)\)"><path d="[^"]+" fill="(#[0-9A-Fa-f]{6})"\/><\/g>/.exec(svg);
+            if (!sand || !pebble || !shift || !glyph) throw new Error(`${file} : SVG du générateur illisible`);
+            // Peintures sans transparence : un pixel plein vaut la couleur déclarée avec un alpha de FF.
+            expect(svg, `${file} : opacité dans le SVG`).not.toMatch(/opacity|rgba|hsla/i);
+            const { width, rgba } = decodePng(readFileSync(file));
+            const at = (x: number, y: number): string => { const i = (Math.floor(y * width / 100) * width + Math.floor(x * width / 100)) * 4; return `#${[0, 1, 2, 3].map(k => rgba[i + k]!.toString(16).padStart(2, '0')).join('').toUpperCase()}`; };
             const [d, e] = [Number(shift[1]), Number(shift[2])];
-            expect(at(0.5, 0.5), `${file} : fond`).toBe(sand.toUpperCase());
-            expect(at(d + 50 * e, d + 14 * e), `${file} : galet`).toBe(pebble.toUpperCase());
+            const [gx, gy, gs, moon] = [Number(glyph[1]), Number(glyph[2]), Number(glyph[3]), glyph[4]!];
+            // Coin : fond ; (50, 14) du motif : dans le galet, au-dessus du glyphe.
+            expect(at(0.5, 0.5), `${file} : fond`).toBe(`${sand.toUpperCase()}FF`);
+            expect(at(d + 50 * e, d + 14 * e), `${file} : galet`).toBe(`${pebble.toUpperCase()}FF`);
+            for (const [x, y] of MOON_INSIDE) {
+                expect(at(d + (gx + x * gs) * e, d + (gy + y * gs) * e), `${file} : lune en (${x}, ${y})`).toBe(`${moon.toUpperCase()}FF`);
+            }
+        }
+        if (spawnSync('rsvg-convert', ['--version']).status !== 0) return;
+        const real = join(work, 'vrai');
+        runIconGenerator(real, false);
+        for (const file of ICONS) {
+            const made = readFileSync(join(real, file)), tracked = readFileSync(file);
+            if (made.equals(tracked)) continue;
+            const a = decodePng(made), b = decodePng(tracked);
+            expect([b.width, b.height], `${file} : dimensions`).toEqual([a.width, a.height]);
+            expect(b.rgba.equals(a.rgba), `${file} diffère de la sortie du générateur (couleur ou alpha)`).toBe(true);
         }
     } finally {
         rmSync(work, { recursive: true, force: true });
