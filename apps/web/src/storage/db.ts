@@ -93,8 +93,11 @@ export async function loadGame(db: IDBDatabase, gameId: string): Promise<{ sessi
 
 export async function listGames(db: IDBDatabase): Promise<Array<Pick<SavedGame, 'id' | 'updatedTurn'> & { finished: boolean }>> {
     const tx = db.transaction('games', 'readonly');
-    const all = await req(tx.objectStore('games').getAll() as IDBRequest<SavedGame[]>);
-    return all.map(g => ({ id: g.id, updatedTurn: g.updatedTurn, finished: g.snapshot.phase === 'finished' }));
+    const all = await req(tx.objectStore('games').getAll() as IDBRequest<StoredGame[]>);
+    return all.map(({ id, updatedTurn, snapshot }) => ({
+        id, updatedTurn,
+        finished: !!snapshot && typeof snapshot === 'object' && 'phase' in snapshot && snapshot.phase === 'finished'
+    }));
 }
 
 export async function deleteGame(db: IDBDatabase, gameId: string): Promise<void> {

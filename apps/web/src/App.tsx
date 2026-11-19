@@ -5,7 +5,7 @@ import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
 import { chooseAiMove } from './game/ai-turn';
-import { resumeOffer } from './game/resume';
+import { resumeOffer, savedResumeStatus } from './game/resume';
 import type { SavedResume } from './game/resume';
 import type { UiCommand, UiState } from './game/controller';
 import type { OpenExample } from './game/examples';
@@ -65,9 +65,9 @@ export function App({ example }: { example?: OpenExample }) {
             const g = games.find(x => x.id === last && !x.finished);
             if (g) {
                 const loaded = await loadGame(d, g.id).catch(() => null);
-                if (loaded && loaded.session.state.phase !== 'finished') {
-                    setResume({ id: g.id, note: !loaded.consistent ? 'La sauvegarde ne correspond plus à son journal de coups : elle est gardée, mais elle peut contenir une erreur.' : null });
-                }
+                const status = savedResumeStatus(g.id, loaded);
+                setResume(status.resume);
+                if (status.message) setMessage(status.message);
             }
         }).catch(() => { setMessage('La sauvegarde n’est pas disponible dans ce navigateur : la partie ne sera pas gardée.'); });
         try {
