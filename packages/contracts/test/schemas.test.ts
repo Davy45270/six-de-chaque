@@ -97,6 +97,21 @@ describe('game snapshot schema', () => {
 });
 
 describe('game action schema', () => {
+    it('every action variant requires a non-negative integer expectedTurn', () => {
+        const variants = [
+            { type: 'PLACE', placements: [{ tileId: id(0), x: 0, y: 0 }] },
+            { type: 'EXCHANGE', tileIds: [id(0)] },
+            { type: 'PASS' }
+        ];
+        for (const variant of variants) {
+            const action = { ...variant, actorId: 'p1', actionId: 'a' };
+            expect(validateGameAction({ ...action, expectedTurn: 0 }).ok, variant.type).toBe(true);
+            expect(validateGameAction(action).ok, `${variant.type} sans expectedTurn`).toBe(false);
+            for (const expectedTurn of [-1, 1.5, '1']) {
+                expect(validateGameAction({ ...action, expectedTurn }).ok, `${variant.type} avec expectedTurn=${JSON.stringify(expectedTurn)}`).toBe(false);
+            }
+        }
+    });
     it('accepts the three action types', () => {
         expect(validateGameAction(place(3)).ok).toBe(true);
         expect(validateGameAction({ type: 'EXCHANGE', actorId: 'p1', expectedTurn: 2, actionId: 'a', tileIds: ['t-001'] }).ok).toBe(true);
