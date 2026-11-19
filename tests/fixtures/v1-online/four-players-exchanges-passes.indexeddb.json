@@ -1,0 +1,3469 @@
+{
+ "dbName": "six-de-chaque",
+ "dbVersion": 1,
+ "stores": {
+  "games": [
+   {
+    "id": "partie-0a1b2c3d-0000-4000-8000-000000000002",
+    "config": {
+     "players": [
+      {
+       "id": "j1",
+       "name": "Sacha",
+       "type": "human"
+      },
+      {
+       "id": "j2",
+       "name": "Ordinateur 1",
+       "type": "ai",
+       "aiLevel": "beginner"
+      },
+      {
+       "id": "j3",
+       "name": "Alix",
+       "type": "human"
+      },
+      {
+       "id": "j4",
+       "name": "Ordinateur 2",
+       "type": "ai",
+       "aiLevel": "intermediate"
+      }
+     ]
+    },
+    "snapshot": {
+     "version": 1,
+     "seed": "5f0c9e2a-6b1d-4c3e-9a7f-2d8b4e6f0038",
+     "rngState": [
+      4137087291,
+      151138811,
+      1492172790,
+      68672612
+     ],
+     "phase": "playing",
+     "turnNumber": 57,
+     "currentPlayerIndex": 0,
+     "tilesById": {
+      "t-000": {
+       "id": "t-000",
+       "color": 0,
+       "shape": 0
+      },
+      "t-001": {
+       "id": "t-001",
+       "color": 0,
+       "shape": 0
+      },
+      "t-002": {
+       "id": "t-002",
+       "color": 0,
+       "shape": 0
+      },
+      "t-003": {
+       "id": "t-003",
+       "color": 0,
+       "shape": 1
+      },
+      "t-004": {
+       "id": "t-004",
+       "color": 0,
+       "shape": 1
+      },
+      "t-005": {
+       "id": "t-005",
+       "color": 0,
+       "shape": 1
+      },
+      "t-006": {
+       "id": "t-006",
+       "color": 0,
+       "shape": 2
+      },
+      "t-007": {
+       "id": "t-007",
+       "color": 0,
+       "shape": 2
+      },
+      "t-008": {
+       "id": "t-008",
+       "color": 0,
+       "shape": 2
+      },
+      "t-009": {
+       "id": "t-009",
+       "color": 0,
+       "shape": 3
+      },
+      "t-010": {
+       "id": "t-010",
+       "color": 0,
+       "shape": 3
+      },
+      "t-011": {
+       "id": "t-011",
+       "color": 0,
+       "shape": 3
+      },
+      "t-012": {
+       "id": "t-012",
+       "color": 0,
+       "shape": 4
+      },
+      "t-013": {
+       "id": "t-013",
+       "color": 0,
+       "shape": 4
+      },
+      "t-014": {
+       "id": "t-014",
+       "color": 0,
+       "shape": 4
+      },
+      "t-015": {
+       "id": "t-015",
+       "color": 0,
+       "shape": 5
+      },
+      "t-016": {
+       "id": "t-016",
+       "color": 0,
+       "shape": 5
+      },
+      "t-017": {
+       "id": "t-017",
+       "color": 0,
+       "shape": 5
+      },
+      "t-018": {
+       "id": "t-018",
+       "color": 1,
+       "shape": 0
+      },
+      "t-019": {
+       "id": "t-019",
+       "color": 1,
+       "shape": 0
+      },
+      "t-020": {
+       "id": "t-020",
+       "color": 1,
+       "shape": 0
+      },
+      "t-021": {
+       "id": "t-021",
+       "color": 1,
+       "shape": 1
+      },
+      "t-022": {
+       "id": "t-022",
+       "color": 1,
+       "shape": 1
+      },
+      "t-023": {
+       "id": "t-023",
+       "color": 1,
+       "shape": 1
+      },
+      "t-024": {
+       "id": "t-024",
+       "color": 1,
+       "shape": 2
+      },
+      "t-025": {
+       "id": "t-025",
+       "color": 1,
+       "shape": 2
+      },
+      "t-026": {
+       "id": "t-026",
+       "color": 1,
+       "shape": 2
+      },
+      "t-027": {
+       "id": "t-027",
+       "color": 1,
+       "shape": 3
+      },
+      "t-028": {
+       "id": "t-028",
+       "color": 1,
+       "shape": 3
+      },
+      "t-029": {
+       "id": "t-029",
+       "color": 1,
+       "shape": 3
+      },
+      "t-030": {
+       "id": "t-030",
+       "color": 1,
+       "shape": 4
+      },
+      "t-031": {
+       "id": "t-031",
+       "color": 1,
+       "shape": 4
+      },
+      "t-032": {
+       "id": "t-032",
+       "color": 1,
+       "shape": 4
+      },
+      "t-033": {
+       "id": "t-033",
+       "color": 1,
+       "shape": 5
+      },
+      "t-034": {
+       "id": "t-034",
+       "color": 1,
+       "shape": 5
+      },
+      "t-035": {
+       "id": "t-035",
+       "color": 1,
+       "shape": 5
+      },
+      "t-036": {
+       "id": "t-036",
+       "color": 2,
+       "shape": 0
+      },
+      "t-037": {
+       "id": "t-037",
+       "color": 2,
+       "shape": 0
+      },
+      "t-038": {
+       "id": "t-038",
+       "color": 2,
+       "shape": 0
+      },
+      "t-039": {
+       "id": "t-039",
+       "color": 2,
+       "shape": 1
+      },
+      "t-040": {
+       "id": "t-040",
+       "color": 2,
+       "shape": 1
+      },
+      "t-041": {
+       "id": "t-041",
+       "color": 2,
+       "shape": 1
+      },
+      "t-042": {
+       "id": "t-042",
+       "color": 2,
+       "shape": 2
+      },
+      "t-043": {
+       "id": "t-043",
+       "color": 2,
+       "shape": 2
+      },
+      "t-044": {
+       "id": "t-044",
+       "color": 2,
+       "shape": 2
+      },
+      "t-045": {
+       "id": "t-045",
+       "color": 2,
+       "shape": 3
+      },
+      "t-046": {
+       "id": "t-046",
+       "color": 2,
+       "shape": 3
+      },
+      "t-047": {
+       "id": "t-047",
+       "color": 2,
+       "shape": 3
+      },
+      "t-048": {
+       "id": "t-048",
+       "color": 2,
+       "shape": 4
+      },
+      "t-049": {
+       "id": "t-049",
+       "color": 2,
+       "shape": 4
+      },
+      "t-050": {
+       "id": "t-050",
+       "color": 2,
+       "shape": 4
+      },
+      "t-051": {
+       "id": "t-051",
+       "color": 2,
+       "shape": 5
+      },
+      "t-052": {
+       "id": "t-052",
+       "color": 2,
+       "shape": 5
+      },
+      "t-053": {
+       "id": "t-053",
+       "color": 2,
+       "shape": 5
+      },
+      "t-054": {
+       "id": "t-054",
+       "color": 3,
+       "shape": 0
+      },
+      "t-055": {
+       "id": "t-055",
+       "color": 3,
+       "shape": 0
+      },
+      "t-056": {
+       "id": "t-056",
+       "color": 3,
+       "shape": 0
+      },
+      "t-057": {
+       "id": "t-057",
+       "color": 3,
+       "shape": 1
+      },
+      "t-058": {
+       "id": "t-058",
+       "color": 3,
+       "shape": 1
+      },
+      "t-059": {
+       "id": "t-059",
+       "color": 3,
+       "shape": 1
+      },
+      "t-060": {
+       "id": "t-060",
+       "color": 3,
+       "shape": 2
+      },
+      "t-061": {
+       "id": "t-061",
+       "color": 3,
+       "shape": 2
+      },
+      "t-062": {
+       "id": "t-062",
+       "color": 3,
+       "shape": 2
+      },
+      "t-063": {
+       "id": "t-063",
+       "color": 3,
+       "shape": 3
+      },
+      "t-064": {
+       "id": "t-064",
+       "color": 3,
+       "shape": 3
+      },
+      "t-065": {
+       "id": "t-065",
+       "color": 3,
+       "shape": 3
+      },
+      "t-066": {
+       "id": "t-066",
+       "color": 3,
+       "shape": 4
+      },
+      "t-067": {
+       "id": "t-067",
+       "color": 3,
+       "shape": 4
+      },
+      "t-068": {
+       "id": "t-068",
+       "color": 3,
+       "shape": 4
+      },
+      "t-069": {
+       "id": "t-069",
+       "color": 3,
+       "shape": 5
+      },
+      "t-070": {
+       "id": "t-070",
+       "color": 3,
+       "shape": 5
+      },
+      "t-071": {
+       "id": "t-071",
+       "color": 3,
+       "shape": 5
+      },
+      "t-072": {
+       "id": "t-072",
+       "color": 4,
+       "shape": 0
+      },
+      "t-073": {
+       "id": "t-073",
+       "color": 4,
+       "shape": 0
+      },
+      "t-074": {
+       "id": "t-074",
+       "color": 4,
+       "shape": 0
+      },
+      "t-075": {
+       "id": "t-075",
+       "color": 4,
+       "shape": 1
+      },
+      "t-076": {
+       "id": "t-076",
+       "color": 4,
+       "shape": 1
+      },
+      "t-077": {
+       "id": "t-077",
+       "color": 4,
+       "shape": 1
+      },
+      "t-078": {
+       "id": "t-078",
+       "color": 4,
+       "shape": 2
+      },
+      "t-079": {
+       "id": "t-079",
+       "color": 4,
+       "shape": 2
+      },
+      "t-080": {
+       "id": "t-080",
+       "color": 4,
+       "shape": 2
+      },
+      "t-081": {
+       "id": "t-081",
+       "color": 4,
+       "shape": 3
+      },
+      "t-082": {
+       "id": "t-082",
+       "color": 4,
+       "shape": 3
+      },
+      "t-083": {
+       "id": "t-083",
+       "color": 4,
+       "shape": 3
+      },
+      "t-084": {
+       "id": "t-084",
+       "color": 4,
+       "shape": 4
+      },
+      "t-085": {
+       "id": "t-085",
+       "color": 4,
+       "shape": 4
+      },
+      "t-086": {
+       "id": "t-086",
+       "color": 4,
+       "shape": 4
+      },
+      "t-087": {
+       "id": "t-087",
+       "color": 4,
+       "shape": 5
+      },
+      "t-088": {
+       "id": "t-088",
+       "color": 4,
+       "shape": 5
+      },
+      "t-089": {
+       "id": "t-089",
+       "color": 4,
+       "shape": 5
+      },
+      "t-090": {
+       "id": "t-090",
+       "color": 5,
+       "shape": 0
+      },
+      "t-091": {
+       "id": "t-091",
+       "color": 5,
+       "shape": 0
+      },
+      "t-092": {
+       "id": "t-092",
+       "color": 5,
+       "shape": 0
+      },
+      "t-093": {
+       "id": "t-093",
+       "color": 5,
+       "shape": 1
+      },
+      "t-094": {
+       "id": "t-094",
+       "color": 5,
+       "shape": 1
+      },
+      "t-095": {
+       "id": "t-095",
+       "color": 5,
+       "shape": 1
+      },
+      "t-096": {
+       "id": "t-096",
+       "color": 5,
+       "shape": 2
+      },
+      "t-097": {
+       "id": "t-097",
+       "color": 5,
+       "shape": 2
+      },
+      "t-098": {
+       "id": "t-098",
+       "color": 5,
+       "shape": 2
+      },
+      "t-099": {
+       "id": "t-099",
+       "color": 5,
+       "shape": 3
+      },
+      "t-100": {
+       "id": "t-100",
+       "color": 5,
+       "shape": 3
+      },
+      "t-101": {
+       "id": "t-101",
+       "color": 5,
+       "shape": 3
+      },
+      "t-102": {
+       "id": "t-102",
+       "color": 5,
+       "shape": 4
+      },
+      "t-103": {
+       "id": "t-103",
+       "color": 5,
+       "shape": 4
+      },
+      "t-104": {
+       "id": "t-104",
+       "color": 5,
+       "shape": 4
+      },
+      "t-105": {
+       "id": "t-105",
+       "color": 5,
+       "shape": 5
+      },
+      "t-106": {
+       "id": "t-106",
+       "color": 5,
+       "shape": 5
+      },
+      "t-107": {
+       "id": "t-107",
+       "color": 5,
+       "shape": 5
+      }
+     },
+     "board": {
+      "0:0": "t-065",
+      "-1:0": "t-055",
+      "-2:0": "t-061",
+      "-1:-1": "t-001",
+      "-2:-1": "t-008",
+      "-2:-2": "t-079",
+      "-3:-2": "t-083",
+      "-3:-1": "t-009",
+      "-4:-1": "t-017",
+      "-4:0": "t-105",
+      "-5:0": "t-104",
+      "-5:-1": "t-012",
+      "-6:-1": "t-005",
+      "-5:-2": "t-050",
+      "-6:-2": "t-040",
+      "-6:-3": "t-023",
+      "-7:-3": "t-039",
+      "-1:1": "t-090",
+      "-2:1": "t-096",
+      "-6:-4": "t-077",
+      "-5:-4": "t-087",
+      "-4:-4": "t-078",
+      "-3:-3": "t-028",
+      "-4:-3": "t-082",
+      "-3:1": "t-106",
+      "-3:2": "t-091",
+      "-1:2": "t-038",
+      "0:2": "t-002",
+      "-1:-2": "t-072",
+      "-1:3": "t-019",
+      "0:3": "t-092",
+      "-7:-2": "t-047",
+      "-5:1": "t-032",
+      "-6:1": "t-022",
+      "-7:1": "t-026",
+      "-6:2": "t-029",
+      "-7:2": "t-035",
+      "-8:-2": "t-043",
+      "-8:-1": "t-041",
+      "-8:0": "t-048",
+      "-9:-1": "t-049",
+      "-10:-1": "t-051",
+      "-5:-5": "t-073",
+      "-4:-5": "t-088",
+      "1:0": "t-067",
+      "1:-1": "t-058",
+      "1:-2": "t-064",
+      "-9:0": "t-046",
+      "-10:0": "t-044",
+      "-7:3": "t-031",
+      "-4:-6": "t-075",
+      "-3:-6": "t-095",
+      "-2:-6": "t-057",
+      "-9:-2": "t-053",
+      "-10:-2": "t-036",
+      "-8:2": "t-018",
+      "-8:3": "t-033",
+      "2:-2": "t-045",
+      "2:-3": "t-011",
+      "3:-2": "t-027",
+      "3:-3": "t-063",
+      "-2:3": "t-000",
+      "-2:4": "t-006",
+      "-3:-7": "t-076",
+      "-2:-7": "t-094",
+      "1:2": "t-056",
+      "1:1": "t-070",
+      "-11:-1": "t-042",
+      "-4:2": "t-107",
+      "-4:3": "t-071",
+      "-4:4": "t-089",
+      "2:0": "t-059",
+      "3:0": "t-069",
+      "4:-3": "t-100",
+      "4:-4": "t-093",
+      "4:-5": "t-102",
+      "5:-4": "t-103",
+      "5:-5": "t-084",
+      "-1:-6": "t-003",
+      "-1:-7": "t-021",
+      "2:1": "t-060",
+      "3:1": "t-066",
+      "5:-6": "t-068",
+      "6:-6": "t-014",
+      "0:4": "t-054",
+      "3:-4": "t-099",
+      "6:-4": "t-098",
+      "-9:1": "t-037",
+      "-4:5": "t-034",
+      "-4:6": "t-052",
+      "-4:7": "t-015",
+      "-6:3": "t-024",
+      "0:-7": "t-004",
+      "0:-8": "t-010",
+      "-2:5": "t-013",
+      "1:-8": "t-081",
+      "-7:4": "t-020",
+      "-8:4": "t-025",
+      "-5:4": "t-074",
+      "-1:5": "t-030",
+      "7:-6": "t-086"
+     },
+     "players": [
+      {
+       "id": "j1",
+       "name": "Sacha",
+       "type": "human",
+       "score": 84,
+       "hand": [
+        "t-007",
+        "t-101",
+        "t-085"
+       ]
+      },
+      {
+       "id": "j2",
+       "name": "Ordinateur 1",
+       "type": "ai",
+       "aiLevel": "beginner",
+       "score": 69,
+       "hand": [
+        "t-062"
+       ]
+      },
+      {
+       "id": "j3",
+       "name": "Alix",
+       "type": "human",
+       "score": 83,
+       "hand": [
+        "t-080",
+        "t-016"
+       ]
+      },
+      {
+       "id": "j4",
+       "name": "Ordinateur 2",
+       "type": "ai",
+       "aiLevel": "intermediate",
+       "score": 99,
+       "hand": [
+        "t-097"
+       ]
+      }
+     ],
+     "bag": [],
+     "consecutivePasses": 1,
+     "config": {
+      "blockedEndPolicy": "fullPassRound",
+      "coordinateLimit": 100000
+     },
+     "endReason": null
+    },
+    "version": 1,
+    "checksum": "e7f4d8735e61d256",
+    "updatedTurn": 57
+   }
+  ],
+  "events": [
+   {
+    "seq": 0,
+    "actionId": "ordi-0-91d5844e",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 0,
+     "actionId": "ordi-0-91d5844e",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-065",
+       "x": 0,
+       "y": 0
+      },
+      {
+       "tileId": "t-055",
+       "x": -1,
+       "y": 0
+      },
+      {
+       "tileId": "t-061",
+       "x": -2,
+       "y": 0
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": 0,
+       "endX": 0,
+       "endY": 0,
+       "length": 3
+      }
+     ],
+     "base": 3,
+     "bonuses": 0,
+     "total": 3
+    },
+    "finalBonus": 0,
+    "prevHash": "0000000000000000",
+    "stateHash": "1f62056da891480d",
+    "hash": "dc72ba257451ecf8",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 1,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-1-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 1,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-1-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-001",
+       "x": -1,
+       "y": -1
+      },
+      {
+       "tileId": "t-008",
+       "x": -2,
+       "y": -1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": -1,
+       "endX": -1,
+       "endY": -1,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -1,
+       "startY": -1,
+       "endX": -1,
+       "endY": 0,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -2,
+       "startY": -1,
+       "endX": -2,
+       "endY": 0,
+       "length": 2
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "dc72ba257451ecf8",
+    "stateHash": "49e952dacccf0ca0",
+    "hash": "b5c9eb73b6f7602a",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 2,
+    "actionId": "ordi-2-81f0407f",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 2,
+     "actionId": "ordi-2-81f0407f",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-079",
+       "x": -2,
+       "y": -2
+      },
+      {
+       "tileId": "t-083",
+       "x": -3,
+       "y": -2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -3,
+       "startY": -2,
+       "endX": -2,
+       "endY": -2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -2,
+       "startY": -2,
+       "endX": -2,
+       "endY": 0,
+       "length": 3
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "b5c9eb73b6f7602a",
+    "stateHash": "ef78f2ad05832dda",
+    "hash": "5e76dce4c061beff",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 3,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-3-echange",
+    "action": {
+     "type": "EXCHANGE",
+     "actorId": "j3",
+     "expectedTurn": 3,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-3-echange",
+     "tileIds": [
+      "t-092",
+      "t-090"
+     ]
+    },
+    "score": null,
+    "finalBonus": 0,
+    "prevHash": "5e76dce4c061beff",
+    "stateHash": "64097e60d54517e8",
+    "hash": "f7f3874dca616272",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 4,
+    "actionId": "ordi-4-e60dbd64",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 4,
+     "actionId": "ordi-4-e60dbd64",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-009",
+       "x": -3,
+       "y": -1
+      },
+      {
+       "tileId": "t-017",
+       "x": -4,
+       "y": -1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -4,
+       "startY": -1,
+       "endX": -1,
+       "endY": -1,
+       "length": 4
+      },
+      {
+       "axis": "v",
+       "startX": -3,
+       "startY": -2,
+       "endX": -3,
+       "endY": -1,
+       "length": 2
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "f7f3874dca616272",
+    "stateHash": "ac87e0101909623d",
+    "hash": "33cfdbb26caea6df",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 5,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-5-echange",
+    "action": {
+     "type": "EXCHANGE",
+     "actorId": "j1",
+     "expectedTurn": 5,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-5-echange",
+     "tileIds": [
+      "t-063",
+      "t-021"
+     ]
+    },
+    "score": null,
+    "finalBonus": 0,
+    "prevHash": "33cfdbb26caea6df",
+    "stateHash": "c52841372f30107d",
+    "hash": "5960e2386bbc8fd1",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 6,
+    "actionId": "ordi-6-b909a6ff",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 6,
+     "actionId": "ordi-6-b909a6ff",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-105",
+       "x": -4,
+       "y": 0
+      },
+      {
+       "tileId": "t-104",
+       "x": -5,
+       "y": 0
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -5,
+       "startY": 0,
+       "endX": -4,
+       "endY": 0,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -4,
+       "startY": -1,
+       "endX": -4,
+       "endY": 0,
+       "length": 2
+      }
+     ],
+     "base": 4,
+     "bonuses": 0,
+     "total": 4
+    },
+    "finalBonus": 0,
+    "prevHash": "5960e2386bbc8fd1",
+    "stateHash": "ec01c26748a684fe",
+    "hash": "9fdc7ad5d1dd1df1",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 7,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-7-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 7,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-7-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-012",
+       "x": -5,
+       "y": -1
+      },
+      {
+       "tileId": "t-005",
+       "x": -6,
+       "y": -1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -6,
+       "startY": -1,
+       "endX": -1,
+       "endY": -1,
+       "length": 6
+      },
+      {
+       "axis": "v",
+       "startX": -5,
+       "startY": -1,
+       "endX": -5,
+       "endY": 0,
+       "length": 2
+      }
+     ],
+     "base": 8,
+     "bonuses": 6,
+     "total": 14
+    },
+    "finalBonus": 0,
+    "prevHash": "9fdc7ad5d1dd1df1",
+    "stateHash": "03b51ea13ce799b6",
+    "hash": "455e6d7f3b8f66f6",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 8,
+    "actionId": "ordi-8-de9eedc5",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 8,
+     "actionId": "ordi-8-de9eedc5",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-050",
+       "x": -5,
+       "y": -2
+      },
+      {
+       "tileId": "t-040",
+       "x": -6,
+       "y": -2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -6,
+       "startY": -2,
+       "endX": -5,
+       "endY": -2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -5,
+       "startY": -2,
+       "endX": -5,
+       "endY": 0,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -6,
+       "startY": -2,
+       "endX": -6,
+       "endY": -1,
+       "length": 2
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "455e6d7f3b8f66f6",
+    "stateHash": "6b149bd365012d6b",
+    "hash": "3d98ccb913f34f41",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 9,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-9-echange",
+    "action": {
+     "type": "EXCHANGE",
+     "actorId": "j1",
+     "expectedTurn": 9,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-9-echange",
+     "tileIds": [
+      "t-041",
+      "t-084"
+     ]
+    },
+    "score": null,
+    "finalBonus": 0,
+    "prevHash": "3d98ccb913f34f41",
+    "stateHash": "85f678bb02bf3116",
+    "hash": "760ef8e6ceec29ed",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 10,
+    "actionId": "ordi-10-17985a00",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 10,
+     "actionId": "ordi-10-17985a00",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-023",
+       "x": -6,
+       "y": -3
+      },
+      {
+       "tileId": "t-039",
+       "x": -7,
+       "y": -3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -7,
+       "startY": -3,
+       "endX": -6,
+       "endY": -3,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -6,
+       "startY": -3,
+       "endX": -6,
+       "endY": -1,
+       "length": 3
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "760ef8e6ceec29ed",
+    "stateHash": "16ffa2357270557f",
+    "hash": "544aa40b81b57d98",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 11,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-11-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 11,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-11-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-090",
+       "x": -1,
+       "y": 1
+      },
+      {
+       "tileId": "t-096",
+       "x": -2,
+       "y": 1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": 1,
+       "endX": -1,
+       "endY": 1,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -1,
+       "startY": -1,
+       "endX": -1,
+       "endY": 1,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -2,
+       "startY": -2,
+       "endX": -2,
+       "endY": 1,
+       "length": 4
+      }
+     ],
+     "base": 9,
+     "bonuses": 0,
+     "total": 9
+    },
+    "finalBonus": 0,
+    "prevHash": "544aa40b81b57d98",
+    "stateHash": "34d432cc211214b0",
+    "hash": "a41f45c0ba46cef7",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 12,
+    "actionId": "ordi-12-d7115ba0",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 12,
+     "actionId": "ordi-12-d7115ba0",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-077",
+       "x": -6,
+       "y": -4
+      },
+      {
+       "tileId": "t-087",
+       "x": -5,
+       "y": -4
+      },
+      {
+       "tileId": "t-078",
+       "x": -4,
+       "y": -4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -6,
+       "startY": -4,
+       "endX": -4,
+       "endY": -4,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -6,
+       "startY": -4,
+       "endX": -6,
+       "endY": -1,
+       "length": 4
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "a41f45c0ba46cef7",
+    "stateHash": "c4193ace4c938ddb",
+    "hash": "78c6d01b32dec2dc",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 13,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-13-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 13,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-13-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-028",
+       "x": -3,
+       "y": -3
+      },
+      {
+       "tileId": "t-082",
+       "x": -4,
+       "y": -3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -4,
+       "startY": -3,
+       "endX": -3,
+       "endY": -3,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -3,
+       "startY": -3,
+       "endX": -3,
+       "endY": -1,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -4,
+       "startY": -4,
+       "endX": -4,
+       "endY": -3,
+       "length": 2
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "78c6d01b32dec2dc",
+    "stateHash": "44b6f71ea268fd76",
+    "hash": "45048cb43b9495a1",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 14,
+    "actionId": "ordi-14-f98ea6ce",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 14,
+     "actionId": "ordi-14-f98ea6ce",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-106",
+       "x": -3,
+       "y": 1
+      },
+      {
+       "tileId": "t-091",
+       "x": -3,
+       "y": 2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -3,
+       "startY": 1,
+       "endX": -1,
+       "endY": 1,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -3,
+       "startY": 1,
+       "endX": -3,
+       "endY": 2,
+       "length": 2
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "45048cb43b9495a1",
+    "stateHash": "5dc3c31db3c41f6c",
+    "hash": "b58ad62df72214a2",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 15,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-15-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 15,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-15-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-038",
+       "x": -1,
+       "y": 2
+      },
+      {
+       "tileId": "t-002",
+       "x": 0,
+       "y": 2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -1,
+       "startY": 2,
+       "endX": 0,
+       "endY": 2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -1,
+       "startY": -1,
+       "endX": -1,
+       "endY": 2,
+       "length": 4
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "b58ad62df72214a2",
+    "stateHash": "1ad4a5d6bfef0ed4",
+    "hash": "f4f23672a8a0953e",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 16,
+    "actionId": "ordi-16-ffd01cb3",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 16,
+     "actionId": "ordi-16-ffd01cb3",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-072",
+       "x": -1,
+       "y": -2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -3,
+       "startY": -2,
+       "endX": -1,
+       "endY": -2,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -1,
+       "startY": -2,
+       "endX": -1,
+       "endY": 2,
+       "length": 5
+      }
+     ],
+     "base": 8,
+     "bonuses": 0,
+     "total": 8
+    },
+    "finalBonus": 0,
+    "prevHash": "f4f23672a8a0953e",
+    "stateHash": "6412f1ce5845c1f6",
+    "hash": "663477d3ef9826f4",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 17,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-17-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 17,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-17-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-019",
+       "x": -1,
+       "y": 3
+      },
+      {
+       "tileId": "t-092",
+       "x": 0,
+       "y": 3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -1,
+       "startY": 3,
+       "endX": 0,
+       "endY": 3,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -1,
+       "startY": -2,
+       "endX": -1,
+       "endY": 3,
+       "length": 6
+      },
+      {
+       "axis": "v",
+       "startX": 0,
+       "startY": 2,
+       "endX": 0,
+       "endY": 3,
+       "length": 2
+      }
+     ],
+     "base": 10,
+     "bonuses": 6,
+     "total": 16
+    },
+    "finalBonus": 0,
+    "prevHash": "663477d3ef9826f4",
+    "stateHash": "16958a37d0b0cd4b",
+    "hash": "030085d6d45a281a",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 18,
+    "actionId": "ordi-18-1572d785",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 18,
+     "actionId": "ordi-18-1572d785",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-047",
+       "x": -7,
+       "y": -2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -7,
+       "startY": -2,
+       "endX": -5,
+       "endY": -2,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -7,
+       "startY": -3,
+       "endX": -7,
+       "endY": -2,
+       "length": 2
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "030085d6d45a281a",
+    "stateHash": "ea8af40d3929df0a",
+    "hash": "ea8d163d15f2a25c",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 19,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-19-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 19,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-19-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-032",
+       "x": -5,
+       "y": 1
+      },
+      {
+       "tileId": "t-022",
+       "x": -6,
+       "y": 1
+      },
+      {
+       "tileId": "t-026",
+       "x": -7,
+       "y": 1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -7,
+       "startY": 1,
+       "endX": -5,
+       "endY": 1,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -5,
+       "startY": -2,
+       "endX": -5,
+       "endY": 1,
+       "length": 4
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "ea8d163d15f2a25c",
+    "stateHash": "dba9711ccaac07fb",
+    "hash": "5239e31ad702b1ad",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 20,
+    "actionId": "ordi-20-20304444",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 20,
+     "actionId": "ordi-20-20304444",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-029",
+       "x": -6,
+       "y": 2
+      },
+      {
+       "tileId": "t-035",
+       "x": -7,
+       "y": 2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -7,
+       "startY": 2,
+       "endX": -6,
+       "endY": 2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -6,
+       "startY": 1,
+       "endX": -6,
+       "endY": 2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -7,
+       "startY": 1,
+       "endX": -7,
+       "endY": 2,
+       "length": 2
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "5239e31ad702b1ad",
+    "stateHash": "e9832f26dcf204b8",
+    "hash": "6e4ef1d635d7f941",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 21,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-21-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 21,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-21-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-043",
+       "x": -8,
+       "y": -2
+      },
+      {
+       "tileId": "t-041",
+       "x": -8,
+       "y": -1
+      },
+      {
+       "tileId": "t-048",
+       "x": -8,
+       "y": 0
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -8,
+       "startY": -2,
+       "endX": -5,
+       "endY": -2,
+       "length": 4
+      },
+      {
+       "axis": "v",
+       "startX": -8,
+       "startY": -2,
+       "endX": -8,
+       "endY": 0,
+       "length": 3
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "6e4ef1d635d7f941",
+    "stateHash": "63806237c97f4414",
+    "hash": "11278e10ecb78dda",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 22,
+    "actionId": "ordi-22-772c78ff",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 22,
+     "actionId": "ordi-22-772c78ff",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-049",
+       "x": -9,
+       "y": -1
+      },
+      {
+       "tileId": "t-051",
+       "x": -10,
+       "y": -1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -10,
+       "startY": -1,
+       "endX": -8,
+       "endY": -1,
+       "length": 3
+      }
+     ],
+     "base": 3,
+     "bonuses": 0,
+     "total": 3
+    },
+    "finalBonus": 0,
+    "prevHash": "11278e10ecb78dda",
+    "stateHash": "16bfe6c160d1bbc9",
+    "hash": "7ef9ca92df7e0302",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 23,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-23-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 23,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-23-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-073",
+       "x": -5,
+       "y": -5
+      },
+      {
+       "tileId": "t-088",
+       "x": -4,
+       "y": -5
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -5,
+       "startY": -5,
+       "endX": -4,
+       "endY": -5,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -5,
+       "startY": -5,
+       "endX": -5,
+       "endY": -4,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -4,
+       "startY": -5,
+       "endX": -4,
+       "endY": -3,
+       "length": 3
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "7ef9ca92df7e0302",
+    "stateHash": "64e10b84ac161152",
+    "hash": "851ef7b5c68a855d",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 24,
+    "actionId": "ordi-24-2285ba5b",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 24,
+     "actionId": "ordi-24-2285ba5b",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-067",
+       "x": 1,
+       "y": 0
+      },
+      {
+       "tileId": "t-058",
+       "x": 1,
+       "y": -1
+      },
+      {
+       "tileId": "t-064",
+       "x": 1,
+       "y": -2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": 0,
+       "endX": 1,
+       "endY": 0,
+       "length": 4
+      },
+      {
+       "axis": "v",
+       "startX": 1,
+       "startY": -2,
+       "endX": 1,
+       "endY": 0,
+       "length": 3
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "851ef7b5c68a855d",
+    "stateHash": "42c03ce6e9c0b5f4",
+    "hash": "db154ba31ff7abbd",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 25,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-25-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 25,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-25-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-046",
+       "x": -9,
+       "y": 0
+      },
+      {
+       "tileId": "t-044",
+       "x": -10,
+       "y": 0
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -10,
+       "startY": 0,
+       "endX": -8,
+       "endY": 0,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -9,
+       "startY": -1,
+       "endX": -9,
+       "endY": 0,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -10,
+       "startY": -1,
+       "endX": -10,
+       "endY": 0,
+       "length": 2
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "db154ba31ff7abbd",
+    "stateHash": "2fcca9198097b986",
+    "hash": "9cee6fcf784c9490",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 26,
+    "actionId": "ordi-26-0a0f2964",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 26,
+     "actionId": "ordi-26-0a0f2964",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-031",
+       "x": -7,
+       "y": 3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "v",
+       "startX": -7,
+       "startY": 1,
+       "endX": -7,
+       "endY": 3,
+       "length": 3
+      }
+     ],
+     "base": 3,
+     "bonuses": 0,
+     "total": 3
+    },
+    "finalBonus": 0,
+    "prevHash": "9cee6fcf784c9490",
+    "stateHash": "5a40701dd05f1df9",
+    "hash": "6263fabdb8e654ac",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 27,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-27-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 27,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-27-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-075",
+       "x": -4,
+       "y": -6
+      },
+      {
+       "tileId": "t-095",
+       "x": -3,
+       "y": -6
+      },
+      {
+       "tileId": "t-057",
+       "x": -2,
+       "y": -6
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -4,
+       "startY": -6,
+       "endX": -2,
+       "endY": -6,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -4,
+       "startY": -6,
+       "endX": -4,
+       "endY": -3,
+       "length": 4
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "6263fabdb8e654ac",
+    "stateHash": "0b217ec9fd8e964e",
+    "hash": "3364eaece8805639",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 28,
+    "actionId": "ordi-28-9b5ca5a3",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 28,
+     "actionId": "ordi-28-9b5ca5a3",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-053",
+       "x": -9,
+       "y": -2
+      },
+      {
+       "tileId": "t-036",
+       "x": -10,
+       "y": -2
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -10,
+       "startY": -2,
+       "endX": -5,
+       "endY": -2,
+       "length": 6
+      },
+      {
+       "axis": "v",
+       "startX": -9,
+       "startY": -2,
+       "endX": -9,
+       "endY": 0,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -10,
+       "startY": -2,
+       "endX": -10,
+       "endY": 0,
+       "length": 3
+      }
+     ],
+     "base": 12,
+     "bonuses": 6,
+     "total": 18
+    },
+    "finalBonus": 0,
+    "prevHash": "3364eaece8805639",
+    "stateHash": "e8b16329de1bbb50",
+    "hash": "dc8eb85c5cdb435c",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 29,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-29-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 29,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-29-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-018",
+       "x": -8,
+       "y": 2
+      },
+      {
+       "tileId": "t-033",
+       "x": -8,
+       "y": 3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -8,
+       "startY": 2,
+       "endX": -6,
+       "endY": 2,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -8,
+       "startY": 2,
+       "endX": -8,
+       "endY": 3,
+       "length": 2
+      },
+      {
+       "axis": "h",
+       "startX": -8,
+       "startY": 3,
+       "endX": -7,
+       "endY": 3,
+       "length": 2
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "dc8eb85c5cdb435c",
+    "stateHash": "6baabbdca9238d58",
+    "hash": "9b58fe29d96b2fd5",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 30,
+    "actionId": "ordi-30-da1dacc3",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 30,
+     "actionId": "ordi-30-da1dacc3",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-045",
+       "x": 2,
+       "y": -2
+      },
+      {
+       "tileId": "t-011",
+       "x": 2,
+       "y": -3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 1,
+       "startY": -2,
+       "endX": 2,
+       "endY": -2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": 2,
+       "startY": -3,
+       "endX": 2,
+       "endY": -2,
+       "length": 2
+      }
+     ],
+     "base": 4,
+     "bonuses": 0,
+     "total": 4
+    },
+    "finalBonus": 0,
+    "prevHash": "9b58fe29d96b2fd5",
+    "stateHash": "8fd7d5c50c2a5cc9",
+    "hash": "22b57a9c588f2125",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 31,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-31-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 31,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-31-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-027",
+       "x": 3,
+       "y": -2
+      },
+      {
+       "tileId": "t-063",
+       "x": 3,
+       "y": -3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 1,
+       "startY": -2,
+       "endX": 3,
+       "endY": -2,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": 3,
+       "startY": -3,
+       "endX": 3,
+       "endY": -2,
+       "length": 2
+      },
+      {
+       "axis": "h",
+       "startX": 2,
+       "startY": -3,
+       "endX": 3,
+       "endY": -3,
+       "length": 2
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "22b57a9c588f2125",
+    "stateHash": "ce107e80725fd893",
+    "hash": "fb0dafd7860c1686",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 32,
+    "actionId": "ordi-32-104675c6",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 32,
+     "actionId": "ordi-32-104675c6",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-000",
+       "x": -2,
+       "y": 3
+      },
+      {
+       "tileId": "t-006",
+       "x": -2,
+       "y": 4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": 3,
+       "endX": 0,
+       "endY": 3,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -2,
+       "startY": 3,
+       "endX": -2,
+       "endY": 4,
+       "length": 2
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "fb0dafd7860c1686",
+    "stateHash": "0571b46fef4aec77",
+    "hash": "9deafce9bc9eac5c",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 33,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-33-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 33,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-33-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-076",
+       "x": -3,
+       "y": -7
+      },
+      {
+       "tileId": "t-094",
+       "x": -2,
+       "y": -7
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -3,
+       "startY": -7,
+       "endX": -2,
+       "endY": -7,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -3,
+       "startY": -7,
+       "endX": -3,
+       "endY": -6,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -2,
+       "startY": -7,
+       "endX": -2,
+       "endY": -6,
+       "length": 2
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "9deafce9bc9eac5c",
+    "stateHash": "75a3909b573cdc7c",
+    "hash": "f4160e8be902abdd",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 34,
+    "actionId": "ordi-34-657478fe",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 34,
+     "actionId": "ordi-34-657478fe",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-056",
+       "x": 1,
+       "y": 2
+      },
+      {
+       "tileId": "t-070",
+       "x": 1,
+       "y": 1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -1,
+       "startY": 2,
+       "endX": 1,
+       "endY": 2,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": 1,
+       "startY": -2,
+       "endX": 1,
+       "endY": 2,
+       "length": 5
+      }
+     ],
+     "base": 8,
+     "bonuses": 0,
+     "total": 8
+    },
+    "finalBonus": 0,
+    "prevHash": "f4160e8be902abdd",
+    "stateHash": "96e60e15c9bfd04e",
+    "hash": "77b21979366a4cab",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 35,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-35-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 35,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-35-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-042",
+       "x": -11,
+       "y": -1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -11,
+       "startY": -1,
+       "endX": -8,
+       "endY": -1,
+       "length": 4
+      }
+     ],
+     "base": 4,
+     "bonuses": 0,
+     "total": 4
+    },
+    "finalBonus": 0,
+    "prevHash": "77b21979366a4cab",
+    "stateHash": "6a3ad1bf7c47d7c0",
+    "hash": "b58dc8bbc678d16e",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 36,
+    "actionId": "ordi-36-7dc8707f",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 36,
+     "actionId": "ordi-36-7dc8707f",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-107",
+       "x": -4,
+       "y": 2
+      },
+      {
+       "tileId": "t-071",
+       "x": -4,
+       "y": 3
+      },
+      {
+       "tileId": "t-089",
+       "x": -4,
+       "y": 4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -4,
+       "startY": 2,
+       "endX": -3,
+       "endY": 2,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -4,
+       "startY": 2,
+       "endX": -4,
+       "endY": 4,
+       "length": 3
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "b58dc8bbc678d16e",
+    "stateHash": "aefdb3ed117508d0",
+    "hash": "88bed29b3fe9eb2f",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 37,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-37-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 37,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-37-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-059",
+       "x": 2,
+       "y": 0
+      },
+      {
+       "tileId": "t-069",
+       "x": 3,
+       "y": 0
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": 0,
+       "endX": 3,
+       "endY": 0,
+       "length": 6
+      }
+     ],
+     "base": 6,
+     "bonuses": 6,
+     "total": 12
+    },
+    "finalBonus": 0,
+    "prevHash": "88bed29b3fe9eb2f",
+    "stateHash": "eeebeac12b43ee00",
+    "hash": "8ab21f3cf78e2e08",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 38,
+    "actionId": "ordi-38-7cd9df75",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 38,
+     "actionId": "ordi-38-7cd9df75",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-100",
+       "x": 4,
+       "y": -3
+      },
+      {
+       "tileId": "t-093",
+       "x": 4,
+       "y": -4
+      },
+      {
+       "tileId": "t-102",
+       "x": 4,
+       "y": -5
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 2,
+       "startY": -3,
+       "endX": 4,
+       "endY": -3,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": 4,
+       "startY": -5,
+       "endX": 4,
+       "endY": -3,
+       "length": 3
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "8ab21f3cf78e2e08",
+    "stateHash": "d42ffa144e254811",
+    "hash": "625778c9f1a4a413",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 39,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-39-pose",
+    "action": {
+     "actorId": "j3",
+     "expectedTurn": 39,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-39-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-103",
+       "x": 5,
+       "y": -4
+      },
+      {
+       "tileId": "t-084",
+       "x": 5,
+       "y": -5
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 4,
+       "startY": -4,
+       "endX": 5,
+       "endY": -4,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": 5,
+       "startY": -5,
+       "endX": 5,
+       "endY": -4,
+       "length": 2
+      },
+      {
+       "axis": "h",
+       "startX": 4,
+       "startY": -5,
+       "endX": 5,
+       "endY": -5,
+       "length": 2
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "625778c9f1a4a413",
+    "stateHash": "ce2fb7b78ea6bae9",
+    "hash": "88ea41fc6672da92",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 40,
+    "actionId": "ordi-40-12d41d86",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 40,
+     "actionId": "ordi-40-12d41d86",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-003",
+       "x": -1,
+       "y": -6
+      },
+      {
+       "tileId": "t-021",
+       "x": -1,
+       "y": -7
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -4,
+       "startY": -6,
+       "endX": -1,
+       "endY": -6,
+       "length": 4
+      },
+      {
+       "axis": "v",
+       "startX": -1,
+       "startY": -7,
+       "endX": -1,
+       "endY": -6,
+       "length": 2
+      },
+      {
+       "axis": "h",
+       "startX": -3,
+       "startY": -7,
+       "endX": -1,
+       "endY": -7,
+       "length": 3
+      }
+     ],
+     "base": 9,
+     "bonuses": 0,
+     "total": 9
+    },
+    "finalBonus": 0,
+    "prevHash": "88ea41fc6672da92",
+    "stateHash": "7172d1f3677dab34",
+    "hash": "ae4f6270299b750d",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 41,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-41-pose",
+    "action": {
+     "actorId": "j1",
+     "expectedTurn": 41,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-41-pose",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-060",
+       "x": 2,
+       "y": 1
+      },
+      {
+       "tileId": "t-066",
+       "x": 3,
+       "y": 1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 1,
+       "startY": 1,
+       "endX": 3,
+       "endY": 1,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": 2,
+       "startY": 0,
+       "endX": 2,
+       "endY": 1,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": 3,
+       "startY": 0,
+       "endX": 3,
+       "endY": 1,
+       "length": 2
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "ae4f6270299b750d",
+    "stateHash": "a7c0811c8ea17e49",
+    "hash": "ab727ea98fddde75",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 42,
+    "actionId": "ordi-42-7dbf23d6",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 42,
+     "actionId": "ordi-42-7dbf23d6",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-068",
+       "x": 5,
+       "y": -6
+      },
+      {
+       "tileId": "t-014",
+       "x": 6,
+       "y": -6
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 5,
+       "startY": -6,
+       "endX": 6,
+       "endY": -6,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": 5,
+       "startY": -6,
+       "endX": 5,
+       "endY": -4,
+       "length": 3
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "ab727ea98fddde75",
+    "stateHash": "fd7f8e688337558c",
+    "hash": "270680d19958f363",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 43,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-43-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j3",
+     "expectedTurn": 43,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-43-pose",
+     "placements": [
+      {
+       "tileId": "t-054",
+       "x": 0,
+       "y": 4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "v",
+       "startX": 0,
+       "startY": 2,
+       "endX": 0,
+       "endY": 4,
+       "length": 3
+      }
+     ],
+     "base": 3,
+     "bonuses": 0,
+     "total": 3
+    },
+    "finalBonus": 0,
+    "prevHash": "270680d19958f363",
+    "stateHash": "f015d8f5fa270fae",
+    "hash": "788f4f1f5f0fe735",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 44,
+    "actionId": "ordi-44-3ef8fcdb",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 44,
+     "actionId": "ordi-44-3ef8fcdb",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-099",
+       "x": 3,
+       "y": -4
+      },
+      {
+       "tileId": "t-098",
+       "x": 6,
+       "y": -4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 3,
+       "startY": -4,
+       "endX": 6,
+       "endY": -4,
+       "length": 4
+      },
+      {
+       "axis": "v",
+       "startX": 3,
+       "startY": -4,
+       "endX": 3,
+       "endY": -2,
+       "length": 3
+      }
+     ],
+     "base": 7,
+     "bonuses": 0,
+     "total": 7
+    },
+    "finalBonus": 0,
+    "prevHash": "788f4f1f5f0fe735",
+    "stateHash": "fdfdc8d50f49dc46",
+    "hash": "3869a11c66c81530",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 45,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-45-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j1",
+     "expectedTurn": 45,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-45-pose",
+     "placements": [
+      {
+       "tileId": "t-037",
+       "x": -9,
+       "y": 1
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "v",
+       "startX": -9,
+       "startY": -2,
+       "endX": -9,
+       "endY": 1,
+       "length": 4
+      }
+     ],
+     "base": 4,
+     "bonuses": 0,
+     "total": 4
+    },
+    "finalBonus": 0,
+    "prevHash": "3869a11c66c81530",
+    "stateHash": "01ac0a04cf89ecad",
+    "hash": "1b17e374a77c0367",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 46,
+    "actionId": "ordi-46-1d434d29",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 46,
+     "actionId": "ordi-46-1d434d29",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-034",
+       "x": -4,
+       "y": 5
+      },
+      {
+       "tileId": "t-052",
+       "x": -4,
+       "y": 6
+      },
+      {
+       "tileId": "t-015",
+       "x": -4,
+       "y": 7
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "v",
+       "startX": -4,
+       "startY": 2,
+       "endX": -4,
+       "endY": 7,
+       "length": 6
+      }
+     ],
+     "base": 6,
+     "bonuses": 6,
+     "total": 12
+    },
+    "finalBonus": 0,
+    "prevHash": "1b17e374a77c0367",
+    "stateHash": "0c4a292f8f01bebb",
+    "hash": "71895978b5ff4ffb",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 47,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-47-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j3",
+     "expectedTurn": 47,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-47-pose",
+     "placements": [
+      {
+       "tileId": "t-024",
+       "x": -6,
+       "y": 3
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -8,
+       "startY": 3,
+       "endX": -6,
+       "endY": 3,
+       "length": 3
+      },
+      {
+       "axis": "v",
+       "startX": -6,
+       "startY": 1,
+       "endX": -6,
+       "endY": 3,
+       "length": 3
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "71895978b5ff4ffb",
+    "stateHash": "69c4b1eac6dd3635",
+    "hash": "06735d10be5d91dc",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 48,
+    "actionId": "ordi-48-84a67468",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 48,
+     "actionId": "ordi-48-84a67468",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-004",
+       "x": 0,
+       "y": -7
+      },
+      {
+       "tileId": "t-010",
+       "x": 0,
+       "y": -8
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -3,
+       "startY": -7,
+       "endX": 0,
+       "endY": -7,
+       "length": 4
+      },
+      {
+       "axis": "v",
+       "startX": 0,
+       "startY": -8,
+       "endX": 0,
+       "endY": -7,
+       "length": 2
+      }
+     ],
+     "base": 6,
+     "bonuses": 0,
+     "total": 6
+    },
+    "finalBonus": 0,
+    "prevHash": "06735d10be5d91dc",
+    "stateHash": "171b2daa23fe702b",
+    "hash": "dc631f7a0f4fd224",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 49,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-49-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j1",
+     "expectedTurn": 49,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-49-pose",
+     "placements": [
+      {
+       "tileId": "t-013",
+       "x": -2,
+       "y": 5
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "v",
+       "startX": -2,
+       "startY": 3,
+       "endX": -2,
+       "endY": 5,
+       "length": 3
+      }
+     ],
+     "base": 3,
+     "bonuses": 0,
+     "total": 3
+    },
+    "finalBonus": 0,
+    "prevHash": "dc631f7a0f4fd224",
+    "stateHash": "2c9e8639e568e6ea",
+    "hash": "aa3733e8a9da4a03",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 50,
+    "actionId": "ordi-50-93b6c2a3",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 50,
+     "actionId": "ordi-50-93b6c2a3",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-081",
+       "x": 1,
+       "y": -8
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 0,
+       "startY": -8,
+       "endX": 1,
+       "endY": -8,
+       "length": 2
+      }
+     ],
+     "base": 2,
+     "bonuses": 0,
+     "total": 2
+    },
+    "finalBonus": 0,
+    "prevHash": "aa3733e8a9da4a03",
+    "stateHash": "32c16ca57543e6e8",
+    "hash": "507b32fe2b1c8975",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 51,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-51-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j3",
+     "expectedTurn": 51,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-51-pose",
+     "placements": [
+      {
+       "tileId": "t-020",
+       "x": -7,
+       "y": 4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "v",
+       "startX": -7,
+       "startY": 1,
+       "endX": -7,
+       "endY": 4,
+       "length": 4
+      }
+     ],
+     "base": 4,
+     "bonuses": 0,
+     "total": 4
+    },
+    "finalBonus": 0,
+    "prevHash": "507b32fe2b1c8975",
+    "stateHash": "6bad1c7917b22a2f",
+    "hash": "dfaf308ec7620f74",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 52,
+    "actionId": "ordi-52-ae2f9dbd",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 52,
+     "actionId": "ordi-52-ae2f9dbd",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-025",
+       "x": -8,
+       "y": 4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -8,
+       "startY": 4,
+       "endX": -7,
+       "endY": 4,
+       "length": 2
+      },
+      {
+       "axis": "v",
+       "startX": -8,
+       "startY": 2,
+       "endX": -8,
+       "endY": 4,
+       "length": 3
+      }
+     ],
+     "base": 5,
+     "bonuses": 0,
+     "total": 5
+    },
+    "finalBonus": 0,
+    "prevHash": "dfaf308ec7620f74",
+    "stateHash": "c991b255cb9856f9",
+    "hash": "636c03e5a6afc09d",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 53,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-53-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j1",
+     "expectedTurn": 53,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-53-pose",
+     "placements": [
+      {
+       "tileId": "t-074",
+       "x": -5,
+       "y": 4
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -5,
+       "startY": 4,
+       "endX": -4,
+       "endY": 4,
+       "length": 2
+      }
+     ],
+     "base": 2,
+     "bonuses": 0,
+     "total": 2
+    },
+    "finalBonus": 0,
+    "prevHash": "636c03e5a6afc09d",
+    "stateHash": "ee78b6970f8969d1",
+    "hash": "e54d2ac13388febb",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 54,
+    "actionId": "ordi-54-66b8f504",
+    "action": {
+     "actorId": "j2",
+     "expectedTurn": 54,
+     "actionId": "ordi-54-66b8f504",
+     "type": "PLACE",
+     "placements": [
+      {
+       "tileId": "t-030",
+       "x": -1,
+       "y": 5
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": -2,
+       "startY": 5,
+       "endX": -1,
+       "endY": 5,
+       "length": 2
+      }
+     ],
+     "base": 2,
+     "bonuses": 0,
+     "total": 2
+    },
+    "finalBonus": 0,
+    "prevHash": "e54d2ac13388febb",
+    "stateHash": "5a27d345ec5086d6",
+    "hash": "216372e0ba18a849",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 55,
+    "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-55-pose",
+    "action": {
+     "type": "PLACE",
+     "actorId": "j3",
+     "expectedTurn": 55,
+     "actionId": "partie-0a1b2c3d-0000-4000-8000-000000000002-55-pose",
+     "placements": [
+      {
+       "tileId": "t-086",
+       "x": 7,
+       "y": -6
+      }
+     ]
+    },
+    "score": {
+     "segments": [
+      {
+       "axis": "h",
+       "startX": 5,
+       "startY": -6,
+       "endX": 7,
+       "endY": -6,
+       "length": 3
+      }
+     ],
+     "base": 3,
+     "bonuses": 0,
+     "total": 3
+    },
+    "finalBonus": 0,
+    "prevHash": "216372e0ba18a849",
+    "stateHash": "565617060f1dc267",
+    "hash": "e3710e0c5d360456",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   },
+   {
+    "seq": 56,
+    "actionId": "ordi-56-9469d172",
+    "action": {
+     "actorId": "j4",
+     "expectedTurn": 56,
+     "actionId": "ordi-56-9469d172",
+     "type": "PASS"
+    },
+    "score": null,
+    "finalBonus": 0,
+    "prevHash": "e3710e0c5d360456",
+    "stateHash": "e7f4d8735e61d256",
+    "hash": "e37bb8a214973717",
+    "gameId": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   }
+  ],
+  "settings": [
+   {
+    "key": "highContrast",
+    "value": false
+   },
+   {
+    "key": "lastGameId",
+    "value": "partie-0a1b2c3d-0000-4000-8000-000000000002"
+   }
+  ]
+ }
+}
