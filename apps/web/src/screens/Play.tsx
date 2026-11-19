@@ -103,6 +103,8 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                                 aria-pressed={pressed} aria-label={`${i + 1} : ${tileLabel(t)}${placed ? ', posée' : ''}`} data-tile={t.id}
                                 onClick={() => { dispatch(ui.mode === 'exchange' ? { t: 'toggleExchangeTile', tileId: t.id } : { t: 'select', tileId: t.id }); }}>
                                 <TileImage tile={t} highContrast={highContrast} colourBlind={colourBlind} />
+                                {/* Numéro visible de la touche 1 à 6 ; le nom accessible le porte déjà (aria-label). */}
+                                <span className="key" aria-hidden="true">{i + 1}</span>
                             </button>
                         );
                     })}
