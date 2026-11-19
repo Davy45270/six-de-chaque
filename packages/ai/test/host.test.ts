@@ -177,3 +177,67 @@ it('the client resolves a synchronous transport exception as an error', async ()
         status: 'error', message: 'Error: Transport indisponible'
     });
 });
+
+it('the move cache key changes with the player and the level at constant game hash', () => {
+    const m = manual();
+    const other = pos.view.players.find(p => p.id !== pos.playerId)?.id;
+    if (!other) throw new Error('second joueur attendu');
+    m.host(request('base'));
+    expect(m.runAll()).toBeGreaterThan(0);
+    m.host(request('même-clé'));
+    expect(m.queue, 'même empreinte, joueur et niveau : servi par le cache').toHaveLength(0);
+    m.host({ ...request('autre-niveau'), level: 'beginner' });
+    expect(m.queue, 'autre niveau à empreinte constante : nouvelle recherche').toHaveLength(1);
+    m.runAll();
+    m.host({ ...request('autre-joueur'), playerId: other });
+    expect(m.queue, 'autre joueur à empreinte constante : nouvelle recherche').toHaveLength(1);
+    m.runAll();
+    expect(m.posted.map(p => p.requestId)).toEqual(['base', 'même-clé', 'autre-niveau', 'autre-joueur']);
+});
+
+function clientWithManualWorker() {
+    const sent: ToWorker[] = [];
+    let receive: (event: { data: FromWorker }) => void = () => {};
+    const client = new AiClient({ addEventListener: (_, fn) => { receive = fn; }, postMessage: message => { sent.push(message); } });
+    return { client, sent, deliver: (data: FromWorker) => { receive({ data }); } };
+}
+function computedDecision(): Extract<FromWorker, { type: 'RESULT' }>['decision'] {
+    const m = manual();
+    m.host(request('référence'));
+    m.runAll();
+    const [result] = m.posted;
+    if (result?.type !== 'RESULT') throw new Error('décision de référence');
+    return result.decision;
+}
+
+it('the client ignores a result whose requestId does not match the pending request', async () => {
+    const decision = computedDecision();
+    const decoy = { ...decision, move: { type: 'PASS' as const, actorId: pos.playerId, expectedTurn: 0, actionId: 'leurre' } };
+    const { client, sent, deliver } = clientWithManualWorker();
+    let settled = false;
+    const answer = client.request({ type: 'REQUEST_MOVES', gameHash: 'h1', view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'beginner', budgetNodes: 10_000 }, () => 'h1');
+    void answer.then(() => { settled = true; });
+    const id = sent[0]?.requestId;
+    if (!id) throw new Error('demande envoyée');
+    deliver({ type: 'RESULT', requestId: `${id}-autre`, gameHash: 'h1', decision: decoy });
+    deliver({ type: 'ERROR', requestId: 'inconnue', message: 'leurre' });
+    await Promise.resolve();
+    expect(settled, 'un résultat d’une autre demande ne résout pas la demande en cours').toBe(false);
+    deliver({ type: 'RESULT', requestId: id, gameHash: 'h1', decision });
+    await expect(answer).resolves.toEqual({ status: 'ok', decision });
+    client.cancel();
+});
+
+it('the client ignores a result whose gameHash does not match the current state', async () => {
+    const decision = computedDecision();
+    const { client, sent, deliver } = clientWithManualWorker();
+    const answer = client.request({ type: 'REQUEST_MOVES', gameHash: 'h1', view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'beginner', budgetNodes: 10_000 }, () => 'h1');
+    const id = sent[0]?.requestId;
+    if (!id) throw new Error('demande envoyée');
+    // Bon requestId, état courant inchangé, mais le résultat porte l'empreinte d'un autre état.
+    deliver({ type: 'RESULT', requestId: id, gameHash: 'autre-etat', decision });
+    await expect(answer).resolves.toEqual({ status: 'stale' });
+    // La décision n'est pas livrée, même si un résultat conforme arrive ensuite.
+    deliver({ type: 'RESULT', requestId: id, gameHash: 'h1', decision });
+    await expect(answer).resolves.toEqual({ status: 'stale' });
+});

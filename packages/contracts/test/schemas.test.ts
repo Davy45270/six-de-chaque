@@ -150,3 +150,25 @@ describe('engine snapshots', () => {
         }
     });
 });
+
+describe('PLACE placement object', () => {
+    const withPlacement = (placement: unknown): unknown => ({ type: 'PLACE', actorId: 'p1', expectedTurn: 0, actionId: 'a1', placements: [{ tileId: id(0), x: 0, y: 0 }, placement] });
+    it('a PLACE placement with an extra property is rejected', () => {
+        expect(validateGameAction(withPlacement({ tileId: id(1), x: 1, y: 0 })).ok).toBe(true);
+        for (const extra of [{ score: 6 }, { note: 'ajout' }, { color: 0 }]) {
+            expect(validateGameAction(withPlacement({ tileId: id(1), x: 1, y: 0, ...extra })).ok, JSON.stringify(extra)).toBe(false);
+        }
+    });
+    it('a PLACE placement missing tileId, x or y is rejected', () => {
+        for (const key of ['tileId', 'x', 'y']) {
+            const placement = Object.fromEntries(Object.entries({ tileId: id(1), x: 1, y: 0 }).filter(([k]) => k !== key));
+            expect(validateGameAction(withPlacement(placement)).ok, `sans ${key}`).toBe(false);
+        }
+    });
+    it('a PLACE placement with non-integer coordinates is rejected', () => {
+        expect(validateGameAction(withPlacement({ tileId: id(1), x: -100_000, y: 100_000 })).ok).toBe(true);
+        for (const [x, y] of [[1.5, 0], [1, -0.5], ['1', 0], [1, '0'], [null, 0], [1, Number.NaN]] as const) {
+            expect(validateGameAction(withPlacement({ tileId: id(1), x, y })).ok, `x=${String(x)} y=${String(y)}`).toBe(false);
+        }
+    });
+});

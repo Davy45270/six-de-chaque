@@ -58,3 +58,22 @@ it('T17 two independent runs of the same seed give the same final hash', () => {
     expect(second.phase).toBe('finished');
     expect(stateHash(first)).toBe(stateHash(second));
 });
+
+it(`T17 every game is replayed and also replayed independently from the same seed to the same final hash`, () => {
+    expect(RUNS, 'T17_RUNS doit valoir au moins 1').toBeGreaterThanOrEqual(1);
+    let checked = 0;
+    for (let i = 0; i < RUNS; i++) {
+        const config = configOf(2 + (i % 3));
+        const seed = `t17-${i}`;
+        const original = playGame(config, seed);
+        expect(original.state.phase).toBe('finished');
+        const expected = stateHash(original.state);
+        expect(stateHash(replay(config, seed, original.events)), `rejeu du journal, graine ${seed}`).toBe(expected);
+        const independent = playGame(config, seed);
+        expect(independent.state.phase).toBe('finished');
+        expect(stateHash(independent.state), `partie indépendante, graine ${seed}`).toBe(expected);
+        expect(independent.events.map(e => e.hash), `journal indépendant, graine ${seed}`).toEqual(original.events.map(e => e.hash));
+        checked++;
+    }
+    expect(checked, 'graines vérifiées deux fois').toBe(RUNS);
+}, 1_200_000);
