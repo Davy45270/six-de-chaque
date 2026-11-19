@@ -5,6 +5,8 @@ import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
 import { chooseAiMove } from './game/ai-turn';
+import { resumeOffer } from './game/resume';
+import type { SavedResume } from './game/resume';
 import type { UiCommand, UiState } from './game/controller';
 import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
@@ -35,7 +37,7 @@ export function App({ example }: { example?: OpenExample }) {
     const [colourBlind, setColourBlind] = useState(false);
     const changedAppearance = useRef({ highContrast: false, colourBlind: false });
     const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set());
-    const [resume, setResume] = useState<{ id: string; note: string | null } | null>(null);
+    const [resume, setResume] = useState<SavedResume | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [announce, setAnnounce] = useState('');
     const [zoom, setZoom] = useState({ n: 0, factor: 1 });
@@ -59,7 +61,9 @@ export function App({ example }: { example?: OpenExample }) {
             const g = games.find(x => x.id === last && !x.finished);
             if (g) {
                 const loaded = await loadGame(d, g.id).catch(() => null);
-                setResume({ id: g.id, note: loaded && !loaded.consistent ? 'La sauvegarde ne correspond plus à son journal de coups : elle est gardée, mais elle peut contenir une erreur.' : null });
+                if (loaded && loaded.session.state.phase !== 'finished') {
+                    setResume({ id: g.id, note: !loaded.consistent ? 'La sauvegarde ne correspond plus à son journal de coups : elle est gardée, mais elle peut contenir une erreur.' : null });
+                }
             }
         }).catch(() => { setMessage('La sauvegarde n’est pas disponible dans ce navigateur : la partie ne sera pas gardée.'); });
         try {
@@ -79,7 +83,7 @@ export function App({ example }: { example?: OpenExample }) {
         setUi(next);
         setAnnounce('');
         setScreen(session.state.phase === 'finished' ? 'end' : 'play');
-        withDb(d => setSetting(d, 'lastGameId', gameId));
+        if (session.state.phase !== 'finished') withDb(d => setSetting(d, 'lastGameId', gameId));
     }, [withDb]);
 
     const apply = useCallback((action: GameAction) => {
@@ -91,7 +95,10 @@ export function App({ example }: { example?: OpenExample }) {
         setUi(next);
         setAnnounce(describeEvent(result.event, cur.config, session.state.tilesById));
         if (cur.gameId !== exampleId) withDb(d => saveTurn(d, cur.gameId, session, cur.config));
-        if (session.state.phase === 'finished') setScreen('end');
+        if (session.state.phase === 'finished') {
+            setResume(saved => saved?.id === cur.gameId ? null : saved);
+            setScreen('end');
+        }
     }, [withDb, exampleId]);
 
     const dispatch = useCallback((c: UiCommand) => {
@@ -209,12 +216,26 @@ export function App({ example }: { example?: OpenExample }) {
             setScreen('home');
         }} />;
     }
-    return <Home canResume={Boolean(resume) || Boolean(standardUi && standardUi.session.state.phase !== 'finished')} resumeNote={resume?.note ?? null} highContrast={highContrast} colourBlind={colourBlind} message={message}
+    const offer = resumeOffer(standardUi, resume);
+    return <Home canResume={Boolean(offer)} resumeNote={offer?.source === 'saved' ? offer.save.note : null} highContrast={highContrast} colourBlind={colourBlind} message={message}
         onNew={() => { setScreen('setup'); }}
         onChallenges={() => { setScreen('challenges'); }}
         onResume={() => {
-            if (standardUi && standardUi.session.state.phase !== 'finished') { setUi(withSession(standardUi, standardUi.session)); setScreen('play'); return; }
-            if (resume) withDb(d => loadGame(d, resume.id).then(g => { open(g.session, g.config, resume.id); }).catch(() => { setMessage('Impossible de relire cette partie.'); }));
+            if (offer?.source === 'current') {
+                setUi(withSession(offer.ui, offer.ui.session));
+                setScreen('play');
+            }
+            if (offer?.source === 'saved') withDb(async d => {
+                const { id } = offer.save;
+                try {
+                    const g = await loadGame(d, id);
+                    if (g.session.state.phase === 'finished') {
+                        setResume(saved => saved?.id === id ? null : saved);
+                        return;
+                    }
+                    open(g.session, g.config, id);
+                } catch { setMessage('Impossible de relire cette partie.'); }
+            });
         }}
         onImport={text => {
             withDb(async d => {

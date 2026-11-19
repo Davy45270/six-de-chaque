@@ -35,10 +35,18 @@ const record = (gameId: string, session: Session, config: GameConfig): SavedGame
     ({ id: gameId, config, snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
 
 export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig): Promise<void> {
-    const tx = db.transaction(['games', 'events'], 'readwrite');
+    const finished = session.state.phase === 'finished';
+    const tx = db.transaction(finished ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
     tx.objectStore('games').put(record(gameId, session, config));
     const last = session.events[session.events.length - 1];
     if (last) tx.objectStore('events').put({ ...last, gameId } satisfies StoredEvent);
+    if (finished) {
+        const settings = tx.objectStore('settings');
+        const lastGameId = settings.get('lastGameId') as IDBRequest<string | undefined>;
+        lastGameId.onsuccess = () => {
+            if (lastGameId.result === gameId) settings.delete('lastGameId');
+        };
+    }
     await done(tx);
 }
 
