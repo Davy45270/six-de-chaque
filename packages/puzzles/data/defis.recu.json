@@ -1,0 +1,122 @@
+[
+  {
+    "seed": "rivage-1-3",
+    "ruleVersion": 2,
+    "puzzleHash": "da4055f9a30d38e5",
+    "status": "solved",
+    "nodes": 8,
+    "solutionHash": "da81db99c629a6b1",
+    "solutionCount": 3,
+    "tier": 1
+  },
+  {
+    "seed": "rivage-1-5",
+    "ruleVersion": 2,
+    "puzzleHash": "fb29526fb6b4904d",
+    "status": "solved",
+    "nodes": 10,
+    "solutionHash": "cafbd1e80f2ce6c9",
+    "solutionCount": 4,
+    "tier": 1
+  },
+  {
+    "seed": "rivage-1-2",
+    "ruleVersion": 2,
+    "puzzleHash": "93be328390b94c22",
+    "status": "solved",
+    "nodes": 25,
+    "solutionHash": "e4a5884ff96f996b",
+    "solutionCount": 3,
+    "tier": 1
+  },
+  {
+    "seed": "rivage-1-4",
+    "ruleVersion": 2,
+    "puzzleHash": "6476ec32afaccca5",
+    "status": "solved",
+    "nodes": 17,
+    "solutionHash": "5983158eb8374f1f",
+    "solutionCount": 2,
+    "tier": 1
+  },
+  {
+    "seed": "rivage-2-4",
+    "ruleVersion": 2,
+    "puzzleHash": "028988012cb045cc",
+    "status": "solved",
+    "nodes": 382,
+    "solutionHash": "8353208be141cead",
+    "solutionCount": 4,
+    "tier": 2
+  },
+  {
+    "seed": "rivage-2-15",
+    "ruleVersion": 2,
+    "puzzleHash": "aef2a6c558b15203",
+    "status": "solved",
+    "nodes": 457,
+    "solutionHash": "8ea385cf3d44fed4",
+    "solutionCount": 4,
+    "tier": 2
+  },
+  {
+    "seed": "rivage-2-9",
+    "ruleVersion": 2,
+    "puzzleHash": "9cca30cb3ce5bc6c",
+    "status": "solved",
+    "nodes": 175,
+    "solutionHash": "66bb75bfc965e935",
+    "solutionCount": 1,
+    "tier": 2
+  },
+  {
+    "seed": "rivage-2-12",
+    "ruleVersion": 2,
+    "puzzleHash": "b2ff4715cc211ff4",
+    "status": "solved",
+    "nodes": 414,
+    "solutionHash": "09174cfa274013ee",
+    "solutionCount": 2,
+    "tier": 2
+  },
+  {
+    "seed": "rivage-3-41",
+    "ruleVersion": 2,
+    "puzzleHash": "72ff69aa75df8256",
+    "status": "solved",
+    "nodes": 1285,
+    "solutionHash": "7bdabc8a870b2a79",
+    "solutionCount": 2,
+    "tier": 3
+  },
+  {
+    "seed": "rivage-3-45",
+    "ruleVersion": 2,
+    "puzzleHash": "fb6984320814bd1f",
+    "status": "solved",
+    "nodes": 4239,
+    "solutionHash": "f4eebcb476a06741",
+    "solutionCount": 6,
+    "tier": 3
+  },
+  {
+    "seed": "rivage-3-44",
+    "ruleVersion": 2,
+    "puzzleHash": "b6a16fd32645fb4d",
+    "status": "solved",
+    "nodes": 5084,
+    "solutionHash": "f2f909456908835f",
+    "solutionCount": 6,
+    "tier": 3
+  },
+  {
+    "seed": "rivage-3-6",
+    "ruleVersion": 2,
+    "puzzleHash": "a58304fe861c1479",
+    "status": "solved",
+    "nodes": 4530,
+    "solutionHash": "5842f8405e21d584",
+    "solutionCount": 5,
+    "tier": 3
+  }
+]

@@ -11,7 +11,7 @@ la conception détaillée et les plans de travail sont tenus hors de ce dépôt.
 - **Identité visuelle propre** : galets clairs aux coins très arrondis sur fond de sable ; glyphes lune, goutte,
   feuille, éclair, spirale, cœur ; couleurs Okabe-Ito et un motif par couleur (plein, rayé, pointillé, quadrillé,
   anneau, chevron). Jamais de bloc noir carré, ni rond, croix, losange, carré ou étoile comme jeu de formes.
-- **Moteur pur** : `packages/engine/**`, `packages/contracts/**` et `packages/ai/src/**` (sauf `worker.ts`)
+- **Moteur pur** : `packages/engine/**`, `packages/contracts/**`, `packages/puzzles/**` et `packages/ai/src/**` (sauf `worker.ts`)
   n'utilisent ni `window`, `document`, `navigator`, `self`, `Date`, `localStorage`, `indexedDB`, `fetch`,
   `performance`, `requestAnimationFrame`, ni `Math.random`, et n'importent ni `react`, ni `react-dom`, ni
   `pixi.js` (oxlint, vérifié par `tests/engine-purity.test.ts`). Aucune fonction publique du moteur ne modifie
@@ -30,9 +30,12 @@ la conception détaillée et les plans de travail sont tenus hors de ce dépôt.
 
 - `packages/engine` : tuiles, PRNG xoshiro128**, empreintes FNV-1a, création de partie, validation, score,
   transitions, journal chaîné, rejeu, projection publique, générateur de coups légaux.
-- `packages/contracts` : schémas JSON des instantanés v1 et v2 et des actions, validateurs ajv.
+- `packages/contracts` : schémas JSON des instantanés v1 et v2 et des actions et des défis, validateurs ajv.
 - `packages/ai` : politiques débutant, intermédiaire, avancé et expert, hôte de Worker annulable, client.
   Le paquet réexporte les types et le générateur de coups du moteur. Le niveau expert compte ses nœuds de recherche.
+- `packages/puzzles` : générateur déterministe à partir d’une partie rejouée, solveur exact et campagne avec reçu.
+  Régénération avec `npm run puzzles:generate`. Un résultat `unknown` reste indéterminé. Seule une recherche
+  exhaustive peut conclure `unsolvable` ou prouver l’unicité.
 - `packages/renderer-pixi` : art (galets, glyphes, motifs), caméra, vue PixiJS du plateau ; aucune règle.
 - `packages/shared` : types non métier.
 - `apps/web` : application React (écrans, main, clavier, historique), IndexedDB, PWA ; le build sort dans

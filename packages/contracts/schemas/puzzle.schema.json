@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Défi Six de chaque",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "board",
+    "hand",
+    "turnLimit",
+    "targetScore",
+    "ruleVersion",
+    "seed",
+    "drawPolicy",
+    "solutions",
+    "solutionHash",
+    "uniqueness"
+  ],
+  "properties": {
+    "board": {
+      "type": "object",
+      "maxProperties": 107,
+      "propertyNames": {
+        "pattern": "^(?:0|-?(?:[1-9][0-9]{0,4}|100000)):(?:0|-?(?:[1-9][0-9]{0,4}|100000))$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/tile"
+      }
+    },
+    "hand": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tile"
+      },
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true
+    },
+    "turnLimit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 108
+    },
+    "targetScore": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ruleVersion": {
+      "const": 2
+    },
+    "seed": {
+      "type": "string",
+      "minLength": 1
+    },
+    "drawPolicy": {
+      "enum": [
+        "none",
+        "ordered"
+      ]
+    },
+    "drawOrder": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tile"
+      },
+      "maxItems": 107,
+      "uniqueItems": true
+    },
+    "solutions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/solution"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "solutionHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "uniqueness": {
+      "enum": [
+        "unique",
+        "unknown",
+        "multiple"
+      ]
+    }
+  },
+  "if": {
+    "properties": {
+      "drawPolicy": {
+        "const": "ordered"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "drawOrder"
+    ]
+  },
+  "else": {
+    "not": {
+      "required": [
+        "drawOrder"
+      ]
+    }
+  },
+  "$defs": {
+    "tile": {
+      "type": "string",
+      "pattern": "^t-(?:0[0-9]{2}|10[0-7])$"
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tileId",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "tileId": {
+          "$ref": "#/$defs/tile"
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -100000,
+          "maximum": 100000
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -100000,
+          "maximum": 100000
+        }
+      }
+    },
+    "solution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "turns",
+        "score"
+      ],
+      "properties": {
+        "turns": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/placement"
+            },
+            "minItems": 1,
+            "maxItems": 6
+          },
+          "minItems": 1,
+          "maxItems": 108
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

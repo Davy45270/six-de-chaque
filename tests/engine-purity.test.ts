@@ -13,7 +13,7 @@ const lint = (probe: string): string => {
     }
 };
 // The pure packages must not reach the clock, the DOM, randomness or the UI libraries: oxlint enforces it.
-it.each(['packages/engine/src', 'packages/ai/src', 'packages/contracts/src'])('engine purity is enforced by lint in %s', folder => {
+it.each(['packages/engine/src', 'packages/ai/src', 'packages/contracts/src', 'packages/puzzles/src'])('engine purity is enforced by lint in %s', folder => {
     const probe = `${folder}/__lint_probe.ts`;
     writeFileSync(probe, "import 'react';\nexport const a = Math.random();\nexport const b = new Date();\nexport const c = indexedDB;\n");
     try {

@@ -57,3 +57,27 @@ incohérent est refusé avant toute écriture.
 `tests/validate-bench.test.ts` affiche le modèle de processeur et la médiane de 15 séries de 1 000 validations
 sur des plateaux synthétiques de 108 et 200 tuiles. `packages/ai/test/bench.test.ts` affiche la médiane de neuf
 décisions et les nœuds évalués pour chaque niveau sur trois positions de référence.
+
+## Défis
+
+`@six-de-chaque/puzzles` extrait le plateau et la main courante d’une partie jouée par l’ordinateur et
+vérifiée par rejeu. Un défi enchaîne les poses d’un seul joueur à partir de zéro point, jusqu’à la limite
+de tours. Le moteur attribue les points de pose et le bonus de fin quand la main et la pioche sont vides.
+Avec `drawPolicy: "none"`, la pioche est vide. Avec `"ordered"`, le moteur tire dans l’ordre de `drawOrder`.
+
+`solve(puzzle, budgetNodes)` compte la racine et chaque état atteint par une séquence de poses. Les copies
+identiques d’un galet sont équivalentes, comme dans le générateur du moteur. Une séquence qui atteint
+l’objectif compte comme solution, et la recherche continue pour trouver les prolongements gagnants.
+Le meilleur score départage les solutions, puis l’ordre lexicographique du JSON canonique des poses
+(classement des tuiles posées par coordonnées). Son empreinte utilise la solution entière, score inclus.
+Un résultat `unknown` signale un budget épuisé et laisse la solvabilité indéterminée, même si des solutions
+ont déjà été trouvées. Seule une recherche exhaustive peut conclure `unsolvable` ou prouver l’unicité.
+
+`generate(seed, options)` fixe l’objectif au meilleur score trouvé après exploration exhaustive et rejette
+tout candidat gagnable en posant une seule tuile ou ayant plus de huit solutions. Le budget par défaut est
+de 12 000 nœuds par position. Les paliers utilisent le plafond du nombre de nœuds divisé par le nombre
+de solutions. Les deux seuils sont 50 et 400. Le statut inscrit au reçu vient du solveur.
+
+`npm run puzzles:generate` régénère les douze défis et leur reçu dans `packages/puzzles/data/`.
+`npm run puzzles:validate` vérifie les invariants et rejoue les solutions de référence avec le moteur.
+Les tests ciblés revérifient aussi l’exhaustivité, les paliers et les empreintes du reçu.

@@ -323,7 +323,8 @@
       "files": [
         "packages/engine/**",
         "packages/contracts/**",
-        "packages/ai/src/**"
+        "packages/ai/src/**",
+        "packages/puzzles/**"
       ],
       "rules": {
         "eslint/no-restricted-globals": [
