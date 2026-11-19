@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { board, handTiles, myTurn, newGame, openApp, tapCentre } from './helpers';
+import { board, myTurn, newGame, openApp, playByHint } from './helpers';
 
 /** Capture du plateau une fois l'image stable (deux captures identiques de suite). */
 async function stableShot(page: Page): Promise<Buffer> {
@@ -19,10 +19,9 @@ test('wheel zooms and drag pans the board', async ({ page, browserName }, testIn
     const errors = await openApp(page, 'molette');
     await newGame(page);
     await myTurn(page);
-    await handTiles(page).first().click();
-    await tapCentre(page);
-    await page.getByRole('button', { name: 'Valider' }).click();
-    await expect(page.getByTestId('history')).toContainText('Ordinateur', { timeout: 20_000 });
+    // Un tour joué pour que le plateau porte des tuiles.
+    await playByHint(page);
+    await expect(page.getByTestId('turn')).not.toHaveText(/^À toi/);
     await myTurn(page);
     const tiles = await board(page).getAttribute('data-tiles');
     const box = await board(page).boundingBox();
