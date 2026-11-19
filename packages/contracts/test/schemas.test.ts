@@ -74,6 +74,14 @@ describe('game snapshot schema', () => {
         expect(validateGameSnapshot({ ...minimal(), board: { '1.5:0': 't-000' } }).ok).toBe(false);
         expect(validateGameSnapshot({ ...minimal(), board: { '-3:12': 't-000' } }).ok).toBe(true);
     });
+    it('a v2 board key with a leading zero is rejected', () => {
+        for (const key of ['01:0', '0:007', '-01:2']) {
+            expect(validateGameSnapshot({ ...minimal(), board: { [key]: 't-000' } }).ok, key).toBe(false);
+        }
+        for (const key of ['0:0', '-3:12']) {
+            expect(validateGameSnapshot({ ...minimal(), board: { [key]: 't-000' } }).ok, key).toBe(true);
+        }
+    });
     it('rejects hand of 7', () => {
         const s = minimal();
         const players = s.players as Array<Record<string, unknown>>;

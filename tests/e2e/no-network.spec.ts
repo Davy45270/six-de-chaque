@@ -141,3 +141,55 @@ test('no request carries a query string or leaves the built files, across settin
     expect(await page.evaluate(() => (window as unknown as { __beacons: string[] }).__beacons), 'balises d’envoi').toEqual([]);
     expect(errors).toEqual([]);
 });
+
+// Rejeu d'une partie terminée (import de la partie bloquée, l'humain passe en dernier) : ouvrir le rejeu puis
+// naviguer Début, Suivant, Fin. Chaque requête de même origine émise depuis le chargement est un GET d'un fichier de
+// `dist/` sans chaîne de requête ni fragment ; aucune autre origine (hors `data:` et `blob:`). La page est ouverte
+// sans `?seed=` pour qu'aucune adresse à paramètres ne vienne du test.
+test('opening the replay at the end of a game sends no request outside the built files', async ({ page, context }) => {
+    test.setTimeout(120_000);
+    const distFiles = new Set(readdirSync('dist', { recursive: true, withFileTypes: true })
+        .filter(entry => entry.isFile())
+        .map(entry => relative('dist', join(entry.parentPath, entry.name)).split(sep).join('/')));
+    expect(distFiles.has('index.html')).toBe(true);
+    const requests: Array<{ url: string; method: string; type: string }> = [];
+    context.on('request', r => requests.push({ url: r.url(), method: r.method(), type: r.resourceType() }));
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'Six de chaque' })).toBeVisible();
+
+    await page.getByTestId('import-file').setInputFiles('tests/fixtures/blocked.json');
+    await expect(board(page)).toBeVisible();
+    const pass = page.getByRole('button', { name: 'Passer' });
+    await expect(pass).toBeVisible({ timeout: 20_000 });
+    await pass.click();
+    await expect(page.getByRole('heading', { name: 'Partie terminée' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Revoir la partie' }).click();
+    await expect(page.getByRole('heading', { name: 'Rejeu' })).toBeVisible();
+    const step = page.getByTestId('replay-step');
+    await expect(step).toContainText(' — Tu passes.');
+    await page.getByRole('button', { name: 'Début' }).click();
+    await expect(step).toContainText('Coup 0');
+    await page.getByRole('button', { name: 'Suivant' }).click();
+    await expect(step).toHaveText(/^Coup 1 sur /);
+    await page.getByRole('button', { name: 'Fin' }).click();
+    await expect(step).toContainText(' — Tu passes.');
+    // Laisse partir une éventuelle requête différée avant le relevé.
+    await page.waitForLoadState('networkidle');
+
+    const origin = new URL(page.url()).origin;
+    const sameOrigin = requests.filter(r => r.url.startsWith(`${origin}/`));
+    expect(sameOrigin.length).toBeGreaterThan(0);
+    expect(requests.filter(r => !r.url.startsWith(`${origin}/`) && !r.url.startsWith('data:') && !r.url.startsWith('blob:')), 'autres origines').toEqual([]);
+    expect(requests.filter(r => r.method !== 'GET' || r.type === 'ping' || r.type === 'beacon'), 'requêtes autres que GET ou balises').toEqual([]);
+    expect(sameOrigin.filter(r => { const u = new URL(r.url); return u.search !== '' || u.hash !== '' || r.url.includes('?') || r.url.includes('#'); }),
+        'chaîne de requête ou fragment').toEqual([]);
+    const outside = sameOrigin.map(r => {
+        const path = decodeURIComponent(new URL(r.url).pathname).replace(/^\//, '');
+        return path === '' ? 'index.html' : path;
+    }).filter(path => !distFiles.has(path));
+    expect(outside, 'adresses de même origine hors des fichiers de dist/').toEqual([]);
+    expect(errors).toEqual([]);
+});
