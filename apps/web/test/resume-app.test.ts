@@ -67,13 +67,30 @@ it('an unreadable saved game is reported on the home screen, not silently droppe
     }
 });
 
+function updateSave(db: IDBDatabase, store: 'games' | 'events', update: (rows: IDBObjectStore) => void): Promise<void> {
+    const tx = db.transaction(store, 'readwrite');
+    update(tx.objectStore(store));
+    return new Promise((resolve, reject) => {
+        tx.oncomplete = () => { resolve(); };
+        tx.onabort = () => { reject(tx.error ?? new Error('Transaction annulée')); };
+    });
+}
+
+function readSave(db: IDBDatabase): Promise<string> {
+    return Promise.all((['games', 'events', 'settings'] as const).map(store => new Promise<unknown[]>((resolve, reject) => {
+        const request = db.transaction(store).objectStore(store).getAll();
+        request.onsuccess = () => { resolve(request.result); };
+        request.onerror = () => { reject(request.error ?? new Error('Lecture impossible')); };
+    }))).then(rows => JSON.stringify(rows));
+}
+
 function clickButton(label: string): void {
     const button = [...host.querySelectorAll('button')].find(b => b.textContent === label);
     if (!button) throw new Error(`Bouton absent : ${label}`);
     act(() => { button.click(); });
 }
 
-it('resuming an inconsistent save never overwrites it with a diverging snapshot', async () => {
+it('a corrupted snapshot is rebuilt from an intact journal', async () => {
     const config = { players: [
         { id: 'alice', name: 'Alice', type: 'human' as const },
         { id: 'bob', name: 'Bob', type: 'human' as const }
@@ -82,7 +99,11 @@ it('resuming an inconsistent save never overwrites it with a diverging snapshot'
     const diverging = { ...session, state: { ...session.state, players: session.state.players.map(p => p.id === 'alice' ? { ...p, score: 99 } : p) } };
     const db = await openDb();
     try {
-        await saveAll(db, gameId, diverging, config);
+        await saveAll(db, gameId, session, config);
+        await updateSave(db, 'games', games => {
+            const read = games.get(gameId);
+            read.onsuccess = () => { games.put({ ...read.result, snapshot: diverging.state }); };
+        });
         await setSetting(db, 'lastGameId', gameId);
         expect((await loadGame(db, gameId)).consistent).toBe(false);
         const load = vi.spyOn(storage, 'loadGame');
@@ -91,6 +112,7 @@ it('resuming an inconsistent save never overwrites it with a diverging snapshot'
             await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
             await load.mock.results[0]?.value;
         });
+        expect(await loadGame(db, gameId)).toMatchObject({ session: diverging, consistent: false });
         clickButton('Reprendre la partie');
         await act(async () => {
             await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
@@ -114,6 +136,34 @@ it('resuming an inconsistent save never overwrites it with a diverging snapshot'
             expect(saved.consistent).toBe(true);
         });
         await expect(exportGame(db, gameId)).resolves.toBeTypeOf('string');
+    } finally {
+        db.close();
+    }
+});
+
+it('a truncated journal never overwrites a newer valid snapshot', async () => {
+    const config = configOf(2);
+    const session = playGame(config, 'journal-tronqué', { maxTurns: 4 });
+    const last = session.events.at(-1);
+    if (!last) throw new Error('Journal vide');
+    const db = await openDb();
+    try {
+        await saveAll(db, gameId, session, config);
+        await setSetting(db, 'lastGameId', gameId);
+        await updateSave(db, 'events', events => { events.delete([gameId, last.seq]); });
+        const before = await readSave(db);
+        const load = vi.spyOn(storage, 'loadGame');
+        mount();
+        await act(async () => {
+            await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.anything(), gameId, 'preview'));
+            await load.mock.results[0]?.value;
+        });
+        expect.soft(await readSave(db)).toBe(before);
+        expect.soft(host.textContent).not.toContain('Reprendre la partie');
+        expect.soft(host.querySelector('[role="alert"]')?.textContent ?? '').toContain('La sauvegarde est conservée.');
+        const loaded = await loadGame(db, gameId, 'resume');
+        expect.soft(loaded.consistent).toBe(false);
+        expect(await readSave(db) === before).toBe(true);
     } finally {
         db.close();
     }
