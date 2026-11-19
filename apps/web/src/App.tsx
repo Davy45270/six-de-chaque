@@ -47,7 +47,7 @@ export function App({ example }: { example?: OpenExample }) {
     const [message, setMessage] = useState<string | null>(null);
     const [announce, setAnnounce] = useState('');
     const [saving, setSaving] = useState(false);
-    const [saveFailed, setSaveFailed] = useState(false);
+    const [saveFailure, setSaveFailure] = useState<'initial' | 'turn' | null>(null);
     const savingTurn = useRef(false);
     const unsavedSince = useRef<GameState | null>(null);
     const [zoom, setZoom] = useState({ n: 0, factor: 1 });
@@ -93,7 +93,7 @@ export function App({ example }: { example?: OpenExample }) {
         const next = initialUi(session, config, gameId);
         setUi(next);
         setAnnounce('');
-        setSaveFailed(false);
+        setSaveFailure(null);
         unsavedSince.current = null;
         setMessage(null);
         setScreen(session.state.phase === 'finished' ? 'end' : 'play');
@@ -110,20 +110,20 @@ export function App({ example }: { example?: OpenExample }) {
             try {
                 await saveTurn(await dbReady, cur.gameId, session, cur.config, unsavedSince.current ?? cur.session.state);
                 unsavedSince.current = null;
-                setSaveFailed(false);
+                setSaveFailure(null);
             } catch (error) {
                 if (error instanceof StaleGameError) {
                     uiRef.current = null;
                     setUi(null);
                     setResume(null);
                     unsavedSince.current = null;
-                    setSaveFailed(false);
+                    setSaveFailure(null);
                     setMessage(error.message);
                     setScreen('home');
                     return;
                 }
                 unsavedSince.current ??= cur.session.state;
-                setSaveFailed(true);
+                setSaveFailure(previous => previous ?? 'turn');
             } finally {
                 savingTurn.current = false;
                 setSaving(false);
@@ -209,7 +209,7 @@ export function App({ example }: { example?: OpenExample }) {
         const session: Session = { state: createGame(config, newSeed()), events: [] };
         open(session, config, gameId);
         void dbReady.then(d => saveAll(d, gameId, session, config, { resumeOnReload: true })).catch(() => {
-            if (uiRef.current?.gameId === gameId) setSaveFailed(true);
+            if (uiRef.current?.gameId === gameId) setSaveFailure('initial');
         });
     };
     // Le choix est écrit d'abord en copie synchrone (survit à un rechargement immédiat), puis dans la base.
@@ -236,7 +236,9 @@ export function App({ example }: { example?: OpenExample }) {
         setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
     };
 
-    const saveMessage = saveFailed ? 'Le dernier tour n’a pas pu être sauvegardé.' : null;
+    const saveMessage = saveFailure === 'initial'
+        ? 'La partie n’a pas pu être sauvegardée. Elle continue, mais un rechargement la perdrait.'
+        : saveFailure === 'turn' ? 'Le dernier tour n’a pas pu être sauvegardé.' : null;
     const saveAlert = saveMessage && <p className="error" role="alert">{saveMessage}</p>;
     if (screen === 'challenges') return <Challenges completed={completed} highContrast={highContrast} colourBlind={colourBlind}
         onComplete={markComplete} onHome={() => { setScreen('home'); }} />;

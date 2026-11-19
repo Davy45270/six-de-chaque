@@ -151,10 +151,10 @@ it('a failed initial save is shown on the game screen', async () => {
         const [, id, initial] = initialSave.mock.calls[0]!;
         expect(await listGames(db)).toEqual([]);
 
-        expect.soft(host.querySelector('main.handover [role="alert"]')?.textContent).toBe('Le dernier tour n’a pas pu être sauvegardé.');
+        expect.soft(host.querySelector('main.handover [role="alert"]')?.textContent).toBe('La partie n’a pas pu être sauvegardée. Elle continue, mais un rechargement la perdrait.');
         const player = initial.state.players[initial.state.currentPlayerIndex];
         clickButton(`C’est moi, ${player?.name}`);
-        expect(host.querySelector('main.play [role="alert"]')?.textContent).toBe('Le dernier tour n’a pas pu être sauvegardé.');
+        expect(host.querySelector('main.play [role="alert"]')?.textContent).toBe('La partie n’a pas pu être sauvegardée. Elle continue, mais un rechargement la perdrait.');
 
         playTurn(initial);
         await act(async () => {
@@ -606,4 +606,18 @@ it('a failed new-game save keeps offering the previous saved game', async () => 
     } finally {
         db.close();
     }
+});
+
+it('the initial save alert names the game, not a turn', async () => {
+    const initialSave = vi.spyOn(storage, 'saveAll').mockRejectedValueOnce(new DOMException('Quota dépassé', 'QuotaExceededError'));
+    mount();
+    clickButton('Nouvelle partie');
+    clickButton('Commencer');
+    await act(async () => {
+        await vi.waitFor(() => expect(initialSave).toHaveBeenCalledOnce());
+        await expect(initialSave.mock.results[0]?.value).rejects.toMatchObject({ name: 'QuotaExceededError' });
+    });
+
+    expect(host.querySelector('[role="alert"]')?.textContent)
+        .toBe('La partie n’a pas pu être sauvegardée. Elle continue, mais un rechargement la perdrait.');
 });
