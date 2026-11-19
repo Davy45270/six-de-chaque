@@ -47,7 +47,7 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
     const tx = db.transaction(finished ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
     const games = tx.objectStore('games');
     const stored = await req(games.get(gameId) as IDBRequest<StoredGame | undefined>);
-    if (stored && (stored.updatedTurn !== savedState.turnNumber || stored.checksum !== previousChecksum)) {
+    if (stored && stored.checksum !== previousChecksum) {
         throw new StaleGameError();
     }
 

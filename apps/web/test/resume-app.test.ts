@@ -161,6 +161,36 @@ it('a failed initial save is repaired by the first turn, not treated as another 
     }
 });
 
+it('a save whose updatedTurn field is wrong can still be resumed and played', async () => {
+    const config = { players: configOf(2).players.map(p => ({ ...p, type: 'human' as const })) };
+    const first = playGame(config, 'tour-altéré', { maxTurns: 1 });
+    const db = await openDb();
+    try {
+        await saveAll(db, gameId, first, config);
+        await updateSave(db, 'games', games => {
+            const read = games.get(gameId);
+            read.onsuccess = () => { games.put({ ...read.result, updatedTurn: 99 }); };
+        });
+        await setSetting(db, 'lastGameId', gameId);
+        await resumeSavedGame();
+        expect(await listGames(db)).toEqual([{ id: gameId, updatedTurn: 99, finished: false }]);
+
+        const save = vi.spyOn(storage, 'saveTurn');
+        playNextTurn(first);
+        await act(async () => {
+            await vi.waitFor(() => expect(save).toHaveBeenCalledOnce());
+            await expect(save.mock.results[0]?.value).resolves.toBeUndefined();
+        });
+        const second = save.mock.calls[0]?.[2];
+        expect(second?.events).toHaveLength(2);
+        expect(await loadGame(db, gameId, 'resume')).toMatchObject({ consistent: true, session: second });
+        expect(await listGames(db)).toEqual([{ id: gameId, updatedTurn: 2, finished: false }]);
+        expect(host.querySelector('main.home')).toBeNull();
+    } finally {
+        db.close();
+    }
+});
+
 it('a turn written from a stale tab is refused and the saved journal stays intact', async () => {
     const config = { players: configOf(2).players.map(p => ({ ...p, type: 'human' as const })) };
     const seed = 'onglets';
