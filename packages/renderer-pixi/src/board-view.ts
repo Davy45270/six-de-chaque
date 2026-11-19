@@ -102,10 +102,18 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     // Gestes : un pointeur glisse, deux pointeurs pincent ; un toucher sans déplacement choisit une case.
     const pointers = new Map<number, { x: number; y: number }>();
     let moved = 0;
+    let multiTouch = false;
     let pinch = 0;
     const local = (e: MouseEvent): { x: number; y: number } => { const r = app.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const canvas = app.canvas;
-    canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, local(e)); moved = 0; if (pointers.size === 2) pinch = 0; });
+    canvas.addEventListener('pointerdown', e => {
+        canvas.setPointerCapture(e.pointerId);
+        if (pointers.size === 0) multiTouch = false;
+        pointers.set(e.pointerId, local(e));
+        if (pointers.size > 1) multiTouch = true;
+        moved = 0;
+        if (pointers.size === 2) pinch = 0;
+    });
     canvas.addEventListener('pointermove', e => {
         const prev = pointers.get(e.pointerId);
         if (!prev) return;
@@ -126,7 +134,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     const up = (e: PointerEvent): void => {
         const p = pointers.get(e.pointerId);
         pointers.delete(e.pointerId);
-        if (p && pointers.size === 0 && moved <= 8 && tap) { const c = screenToCell(camera, p.x, p.y, CELL_PX); tap(c.x, c.y); }
+        if (p && pointers.size === 0 && !multiTouch && moved <= 8 && tap) { const c = screenToCell(camera, p.x, p.y, CELL_PX); tap(c.x, c.y); }
     };
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); });

@@ -76,3 +76,31 @@ it('high contrast ghost tiles keep at least 3:1 contrast on the board and stay d
         view.destroy();
     }
 });
+
+it('a two-finger contact never taps a cell', async () => {
+    vi.spyOn(Image.prototype, 'decode').mockResolvedValue(undefined);
+    const view = await createBoardView(document.createElement('div'), {});
+    try {
+        vi.spyOn(view.canvas, 'setPointerCapture').mockImplementation(() => {});
+        const tap = vi.fn();
+        view.onCellTap(tap);
+        const pointer = (type: string, pointerId: number) => {
+            view.canvas.dispatchEvent(new PointerEvent(type, { pointerId, pointerType: 'touch', clientX: 120 + pointerId * 20, clientY: 120 }));
+        };
+
+        for (const end of ['pointerup', 'pointercancel']) {
+            pointer('pointerdown', 1);
+            pointer('pointerdown', 2);
+            pointer(end, 1);
+            expect(tap).not.toHaveBeenCalled();
+            pointer('pointerup', 2);
+            expect(tap).not.toHaveBeenCalled();
+        }
+
+        pointer('pointerdown', 1);
+        pointer('pointerup', 1);
+        expect(tap).toHaveBeenCalledOnce();
+    } finally {
+        view.destroy();
+    }
+});
