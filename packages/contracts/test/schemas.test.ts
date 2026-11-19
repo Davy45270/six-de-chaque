@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateGameAction, validateGameSnapshot } from '../src/index';
+import { gameSchema, validateGameAction, validateGameSnapshot, validateGameSnapshotV1 } from '../src/index';
 import { createGame } from '@six-de-chaque/engine';
 
 const id = (i: number): string => `t-${String(i).padStart(3, '0')}`;
@@ -8,7 +8,7 @@ function minimal(): Record<string, unknown> {
     for (let i = 0; i < 108; i++) tilesById[id(i)] = { id: id(i), color: Math.floor(i / 18), shape: Math.floor(i / 3) % 6 };
     const all = Array.from({ length: 108 }, (_, i) => id(i));
     return {
-        version: 1, seed: 'essai', rngState: [1, 2, 3, 4], phase: 'opening', turnNumber: 0, currentPlayerIndex: 0, tilesById, board: {},
+        version: 2, seed: 'essai', rngState: [1, 2, 3, 4], phase: 'opening', turnNumber: 0, currentPlayerIndex: 0, tilesById, board: {},
         players: [
             { id: 'p1', name: 'Alice', type: 'human', score: 0, hand: all.slice(0, 6) },
             { id: 'p2', name: 'Ordinateur', type: 'ai', aiLevel: 'beginner', score: 0, hand: all.slice(6, 12) }
@@ -18,6 +18,51 @@ function minimal(): Record<string, unknown> {
 }
 const place = (n: number): unknown => ({ type: 'PLACE', actorId: 'p1', expectedTurn: 0, actionId: 'a1',
     placements: Array.from({ length: n }, (_, i) => ({ tileId: id(i), x: i, y: 0 })) });
+
+it('v1 schema matches the specification contract', () => {
+    const string = { type: 'string' };
+    const integer = (minimum: number, maximum?: number) => ({ type: 'integer', minimum, ...(maximum === undefined ? {} : { maximum }) });
+    expect(gameSchema).toEqual({
+        $schema: 'https://json-schema.org/draft/2020-12/schema',
+        title: 'Six de chaque GameState v1 (wire snapshot)',
+        type: 'object',
+        additionalProperties: false,
+        required: ['version', 'seed', 'rngState', 'phase', 'turnNumber', 'currentPlayerIndex', 'tilesById', 'board', 'players', 'bag'],
+        properties: {
+            version: { const: 1 }, seed: { ...string, minLength: 1 },
+            rngState: { type: 'array', items: integer(0, 4294967295), minItems: 4, maxItems: 4 },
+            phase: { enum: ['opening', 'playing', 'finished'] }, turnNumber: integer(0), currentPlayerIndex: integer(0, 3),
+            tilesById: { type: 'object', additionalProperties: { $ref: '#/$defs/tile' } },
+            board: { type: 'object', propertyNames: { pattern: '^-?(0|[1-9][0-9]*):-?(0|[1-9][0-9]*)$' }, additionalProperties: string },
+            players: { type: 'array', minItems: 2, maxItems: 4, items: {
+                type: 'object', additionalProperties: false, required: ['id', 'name', 'type', 'score', 'hand'],
+                properties: { id: string, name: string, type: { enum: ['human', 'ai'] }, score: integer(0), hand: { type: 'array', maxItems: 6, items: string } }
+            } },
+            bag: { type: 'array', items: string }
+        },
+        $defs: { tile: { type: 'object', additionalProperties: false, required: ['id', 'color', 'shape'],
+            properties: { id: string, color: integer(0, 5), shape: integer(0, 5) } } }
+    });
+});
+
+it('snapshot with an extra field is rejected (no secret can be stored)', () => {
+    const { consecutivePasses: _p, config: _c, endReason: _e, ...base } = minimal();
+    const players = (base.players as Array<Record<string, unknown>>).map(({ aiLevel: _a, ...player }) => player);
+    const v1 = { ...base, version: 1, players };
+    expect(validateGameSnapshotV1(v1).ok).toBe(true);
+    expect(validateGameSnapshotV1({ ...v1, secret: 'private' }).ok).toBe(false);
+    const v2 = { ...minimal(), version: 2 };
+    expect(validateGameSnapshot(v2).ok).toBe(true);
+    expect(validateGameSnapshot({ ...v2, secret: 'private' }).ok).toBe(false);
+    expect(validateGameSnapshot({ ...v2, players: [{ ...players[0], secret: 'private' }, players[1]] }).ok).toBe(false);
+});
+
+it('EXCHANGE schema accepts 1 to 6 tiles only', () => {
+    for (const n of [0, 1, 2, 3, 4, 5, 6, 7]) {
+        expect(validateGameAction({ type: 'EXCHANGE', actorId: 'p1', expectedTurn: 2, actionId: 'a',
+            tileIds: Array.from({ length: n }, (_, i) => id(i)) }).ok).toBe(n >= 1 && n <= 6);
+    }
+});
 
 describe('game snapshot schema', () => {
     it('accepts a minimal valid snapshot', () => {
@@ -67,10 +112,12 @@ describe('game action schema', () => {
 });
 
 describe('engine snapshots', () => {
-    it('snapshot from createGame validates', () => {
+    it('v2 snapshot from createGame validates', () => {
         for (const n of [2, 4]) {
-            const players = [{ id: 'h', name: 'Humain', type: 'human' as const }, ...Array.from({ length: n - 1 }, (_, i) => ({ id: `o${i}`, name: 'Ordinateur', type: 'ai' as const, aiLevel: 'intermediate' as const }))];
-            expect(validateGameSnapshot(JSON.parse(JSON.stringify(createGame({ players }, `schema-${n}`))))).toMatchObject({ ok: true });
+            const players = [{ id: 'h', name: 'Humain', type: 'human' as const }, ...Array.from({ length: n - 1 }, (_, i) => ({ id: `o${i}`, name: 'Ordinateur', type: 'ai' as const, aiLevel: (['intermediate', 'advanced', 'expert'] as const)[i % 3]! }))];
+            const state = createGame({ players }, `schema-${n}`);
+            expect(state.version).toBe(2);
+            expect(validateGameSnapshot(state)).toMatchObject({ ok: true });
         }
     });
 });

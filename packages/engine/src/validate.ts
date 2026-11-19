@@ -3,6 +3,7 @@ import { findAnyLegalPlacement, isDeadPosition } from './moves';
 import { validatePlacements } from './placement';
 import { OK, reject } from './reject';
 import type { Validation } from './reject';
+import { GAME_VERSION } from './types';
 import type { ExchangeAction, GameAction, GameState, PlayerState, TileId } from './types';
 
 export type { RejectCode, Rejection, Validation } from './reject';
@@ -27,6 +28,7 @@ function validateExchange(state: GameState, hand: readonly TileId[], action: Exc
 }
 
 export function validateAction(state: GameState, action: GameAction): Validation {
+    if ((state.version as number) !== GAME_VERSION) return reject('VERSION', 'Version de partie incompatible.');
     const turn = validateTurn(state, action);
     if (!turn.ok) return turn;
     // validateTurn garantit que le joueur courant existe et agit.

@@ -7,12 +7,13 @@ export type PlaceAction = ActionBase & { type: 'PLACE'; placements: Placement[] 
 export type ExchangeAction = ActionBase & { type: 'EXCHANGE'; tileIds: TileId[] };
 export type PassAction = ActionBase & { type: 'PASS' };
 export type GameAction = PlaceAction | ExchangeAction | PassAction;
-export type AiLevel = 'beginner' | 'intermediate';
+export type AiLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
+export const GAME_VERSION = 2;
 export interface PlayerState { id: string; name: string; type: 'human' | 'ai'; aiLevel?: AiLevel; score: number; hand: TileId[] }
 export interface RulesConfig { blockedEndPolicy: 'fullPassRound'; coordinateLimit: number }
 export type RngState = [number, number, number, number];
 export interface GameState {
-    version: 1;
+    version: typeof GAME_VERSION;
     seed: string;
     rngState: RngState;
     phase: 'opening' | 'playing' | 'finished';

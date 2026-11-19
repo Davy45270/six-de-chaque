@@ -2,6 +2,7 @@
 import { ALL_TILES, HAND_SIZE, tileOf, tilesRecord } from './tiles';
 import { randomInt, seedToState, shuffle } from './rng';
 import { largestCompatibleGroup } from './lines';
+import { GAME_VERSION } from './types';
 import type { GameConfig, GameState, RulesConfig } from './types';
 
 export const DEFAULT_RULES: RulesConfig = { blockedEndPolicy: 'fullPassRound', coordinateLimit: 100_000 };
@@ -29,7 +30,7 @@ export function createGame(config: GameConfig, seed: string): GameState {
         first = tied[pick] ?? first;
     }
     return {
-        version: 1, seed, rngState, phase: 'opening', turnNumber: 0, currentPlayerIndex: first,
+        version: GAME_VERSION, seed, rngState, phase: 'opening', turnNumber: 0, currentPlayerIndex: first,
         tilesById: tilesRecord(), board: {}, players, bag: order.slice(n * HAND_SIZE),
         consecutivePasses: 0, config: { ...DEFAULT_RULES, ...config.rules }, endReason: null
     };

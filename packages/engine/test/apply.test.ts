@@ -5,6 +5,7 @@ import { createGame } from '../src/create';
 import { checkInvariants } from '../src/invariants';
 import { submit } from '../src/session';
 import { isDeadPosition } from '../src/moves';
+import { validateAction } from '../src/validate';
 import { tileId } from '../src/tiles';
 import type { GameAction, GameState } from '../src/types';
 import { bot, human, stateFrom } from './fixtures';
@@ -151,4 +152,25 @@ describe('applyAction', () => {
         expect(end.phase).toBe('finished');
         expect(end.endReason === 'out' || end.endReason === 'blocked').toBe(true);
     });
+});
+
+it('an action on a state of another version is rejected', () => {
+    const state = stateFrom({ hands: [[[0, 1]], [[1, 1]]], phase: 'opening' });
+    const action = { type: 'PLACE' as const, actorId: 'p1', expectedTurn: 0, actionId: 'version', placements: [{ tileId: tileId(0, 1, 0), x: 0, y: 0 }] };
+    expect(validateAction(state, action)).toEqual({ ok: true });
+    const legacy = { ...state, version: 1 } as unknown as GameState;
+    expect(validateAction(legacy, action)).toMatchObject({ ok: false, code: 'VERSION' });
+    const result = applyAction(legacy, action);
+    expect(result).toMatchObject({ ok: false, error: { code: 'VERSION' } });
+    expect(result.state).toBe(legacy);
+});
+
+it('exchange scores 0 and passes the turn', () => {
+    const state = stateFrom({ board: [[0, 0, 0, 0]], hands: [[[0, 1]], [[1, 1]]], bagCount: 5 });
+    const t = applyAction(state, { type: 'EXCHANGE', actorId: 'p1', expectedTurn: 0, actionId: 'exchange', tileIds: [tileId(0, 1, 0)] });
+    if (!t.ok) throw new Error(t.error.code);
+    expect(t.state.currentPlayerIndex).toBe(1);
+    expect(t.state.turnNumber).toBe(1);
+    expect(t.state.players.map(p => p.score)).toEqual(state.players.map(p => p.score));
+    expect(t.event).toMatchObject({ score: null, finalBonus: 0 });
 });

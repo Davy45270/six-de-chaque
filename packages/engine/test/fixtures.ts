@@ -30,7 +30,7 @@ export function stateFrom(spec: FixtureSpec): GameState {
     });
     const rest = ALL_TILES.map(t => t.id).filter(id => !used.has(id));
     return {
-        version: 1, seed: 'fixture', rngState: [1, 2, 3, 4],
+        version: 2, seed: 'fixture', rngState: [1, 2, 3, 4],
         phase: spec.phase ?? (Object.keys(board).length ? 'playing' : 'opening'),
         turnNumber: spec.turn ?? 0, currentPlayerIndex: spec.current ?? 0, tilesById: tilesRecord(), board, players,
         bag: spec.bagCount === undefined ? rest : rest.slice(0, spec.bagCount), consecutivePasses: 0, config: { ...DEFAULT_RULES }, endReason: null
