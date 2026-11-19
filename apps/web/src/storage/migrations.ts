@@ -112,7 +112,10 @@ export function migrateSave(save: SaveData): CurrentSave {
             if (stateHash(snapshot) !== save.checksum || canonicalJson(replay(config, snapshot.seed, oldEvents)) !== canonicalJson(snapshot)) {
                 throw new SaveError('Le journal des coups ne redonne pas cette partie.');
             }
-            return { version: CURRENT_VERSION, config, snapshot, events: oldEvents, checksum: save.checksum };
+            const events = oldEvents.map(({ seq, actionId, action, score, finalBonus, prevHash, stateHash, hash }) => ({
+                seq, actionId, action, score, finalBonus, prevHash, stateHash, hash
+            }));
+            return { version: CURRENT_VERSION, config, snapshot, events, checksum: save.checksum };
         }
 
         let state = createGame(config, snapshot.seed);

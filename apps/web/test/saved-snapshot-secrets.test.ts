@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { expect, it } from 'vitest';
 import { openDb, saveAll, saveTurn } from '../src/storage/db';
-import { exportGame, serializeGame } from '../src/storage/transfer';
+import { exportGame, importGame, parseExport, serializeGame } from '../src/storage/transfer';
 import { submit } from '@six-de-chaque/engine';
 import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
 
@@ -51,6 +51,28 @@ it('the saved snapshot carries no authentication secret', async () => {
             savedAll, savedTurn, serialized: JSON.parse(serializeGame(session, injected)) as unknown
         })).toEqual([]);
         expect(findSecrets(JSON.parse(await exportGame(db, 'partie-1')) as unknown)).toEqual([]);
+    } finally {
+        db.close();
+    }
+});
+
+it('an imported save keeps no unknown field in its events', async () => {
+    const config = configOf(2);
+    const session = playGame(config, 'import', { maxTurns: 3 });
+    const parsed = parseExport(serializeGame(session, config));
+    if (!parsed.ok) throw new Error(parsed.reason);
+    const events = parsed.save.events.map(event => ({ ...event, note: 'extra' }));
+    const db = await openDb('import-journal');
+    try {
+        const gameId = 'partie-importée';
+        expect(await importGame(db, JSON.stringify({ ...parsed.save, events }), () => gameId)).toEqual({ ok: true, gameId });
+        const stored = await new Promise<unknown[]>((resolve, reject) => {
+            const read = db.transaction('events').objectStore('events').getAll();
+            read.onsuccess = () => { resolve(read.result); };
+            read.onerror = () => { reject(read.error ?? new Error('lecture')); };
+        });
+        expect.soft(stored).toEqual(session.events.map(event => ({ ...event, gameId })));
+        expect(JSON.parse(await exportGame(db, gameId))).toEqual(parsed.save);
     } finally {
         db.close();
     }
