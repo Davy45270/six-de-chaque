@@ -1,7 +1,10 @@
 // Provenance des images et des sons : chaque fichier binaire ou image du dépôt sort d'un générateur du dépôt.
 // Aucune police externe, aucune ressource tierce dans la page.
-import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { delimiter, join, resolve } from 'node:path';
+import { inflateSync } from 'node:zlib';
 import { expect, it } from 'vitest';
 import { glyphSheet } from '../packages/renderer-pixi/src/art';
 
@@ -32,4 +35,78 @@ it('every image in the repository comes from a generator in the repository', () 
     expect(css).not.toMatch(/@font-face|@import|url\(\s*['"]?(https?:)?\/\//i);
     const html = readFileSync('apps/web/index.html', 'utf8');
     expect(html, 'ressource tierce dans la page').not.toMatch(/(src|href)\s*=\s*["']?(https?:)?\/\//i);
+});
+
+/** Décode un PNG 8 bits non entrelacé (RVB ou RVBA) en pixels RVB : largeur, hauteur, octets. */
+function decodePng(png: Buffer): { width: number; height: number; rgb: Buffer } {
+    const width = png.readUInt32BE(16), height = png.readUInt32BE(20), depth = png[24], type = png[25], interlace = png[28];
+    if (depth !== 8 || (type !== 2 && type !== 6) || interlace !== 0) throw new Error(`PNG non pris en charge : ${depth} bits, type ${type}`);
+    const chunks: Buffer[] = [];
+    for (let at = 8; at < png.length;) {
+        const length = png.readUInt32BE(at), kind = png.toString('latin1', at + 4, at + 8);
+        if (kind === 'IDAT') chunks.push(png.subarray(at + 8, at + 8 + length));
+        at += 12 + length;
+    }
+    const raw = inflateSync(Buffer.concat(chunks)), bpp = type === 6 ? 4 : 3, stride = width * bpp;
+    const out = Buffer.alloc(stride * height);
+    for (let y = 0; y < height; y++) {
+        const filter = raw[y * (stride + 1)]!;
+        for (let x = 0; x < stride; x++) {
+            const v = raw[y * (stride + 1) + 1 + x]!;
+            const a = x >= bpp ? out[y * stride + x - bpp]! : 0, b = y > 0 ? out[(y - 1) * stride + x]! : 0, c = x >= bpp && y > 0 ? out[(y - 1) * stride + x - bpp]! : 0;
+            const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+            const pred = [0, a, b, (a + b) >> 1, pa <= pb && pa <= pc ? a : pb <= pc ? b : c][filter];
+            if (pred === undefined) throw new Error(`filtre PNG inconnu : ${filter}`);
+            out[y * stride + x] = (v + pred) & 0xff;
+        }
+    }
+    const rgb = Buffer.alloc(width * height * 3);
+    for (let i = 0; i < width * height; i++) out.copy(rgb, i * 3, i * bpp, i * bpp + 3);
+    return { width, height, rgb };
+}
+
+const ICONS = Object.keys(PROVENANCE).filter(file => file.startsWith('apps/web/public/icons/'));
+
+// Les icônes suivies sont exactement ce que produit le générateur du dépôt, relancé dans un dossier temporaire.
+// Avec rsvg-convert : comparaison octet par octet (pixel par pixel si l'encodage diffère). Sans lui (image de CI) :
+// un faux rsvg-convert recueille le SVG produit, et les pixels du PNG suivi doivent porter ses couleurs de fond
+// (sable autour, galet clair hors du glyphe).
+it('the tracked icons are what the icon generator in the repository produces', () => {
+    const work = mkdtempSync(join(tmpdir(), 'six-icones-'));
+    try {
+        const real = spawnSync('rsvg-convert', ['--version']).status === 0;
+        const env = { ...process.env };
+        if (!real) {
+            const bin = join(work, 'bin');
+            mkdirSync(bin);
+            writeFileSync(join(bin, 'rsvg-convert'), '#!/bin/sh\nfor last; do :; done\ncat > "$last.svg"\n');
+            chmodSync(join(bin, 'rsvg-convert'), 0o755);
+            env.PATH = `${bin}${delimiter}${env.PATH ?? ''}`;
+        }
+        execFileSync(process.execPath, [resolve('scripts/make-icons.js')], { cwd: work, env, stdio: 'pipe' });
+        for (const file of ICONS) {
+            const tracked = readFileSync(file);
+            if (real) {
+                const made = readFileSync(join(work, file));
+                if (made.equals(tracked)) continue;
+                const a = decodePng(made), b = decodePng(tracked);
+                expect([b.width, b.height], `${file} : dimensions`).toEqual([a.width, a.height]);
+                expect(b.rgb.equals(a.rgb), `${file} diffère de la sortie du générateur`).toBe(true);
+                continue;
+            }
+            const svg = readFileSync(join(work, `${file}.svg`), 'utf8');
+            const sand = /<rect width="100" height="100" fill="(#[0-9A-Fa-f]{6})"\/>/.exec(svg)?.[1];
+            const pebble = /<rect x="10" y="10" width="80" height="80" rx="24" fill="(#[0-9A-Fa-f]{6})"/.exec(svg)?.[1];
+            const shift = /<g transform="translate\(([\d.]+) [\d.]+\) scale\(([\d.]+)\)">/.exec(svg);
+            if (!sand || !pebble || !shift) throw new Error(`${file} : SVG du générateur illisible`);
+            const { width, rgb } = decodePng(tracked);
+            const at = (x: number, y: number): string => { const i = (Math.floor(y * width / 100) * width + Math.floor(x * width / 100)) * 3; return `#${[0, 1, 2].map(k => rgb[i + k]!.toString(16).padStart(2, '0')).join('').toUpperCase()}`; };
+            // Coin : fond ; (50, 14) du motif : dans le galet, au-dessus du glyphe.
+            const [d, e] = [Number(shift[1]), Number(shift[2])];
+            expect(at(0.5, 0.5), `${file} : fond`).toBe(sand.toUpperCase());
+            expect(at(d + 50 * e, d + 14 * e), `${file} : galet`).toBe(pebble.toUpperCase());
+        }
+    } finally {
+        rmSync(work, { recursive: true, force: true });
+    }
 });
