@@ -118,3 +118,28 @@ it('a missing game record with an orphan journal is rewritten as one consistent 
     expect(await rawEvents(db, 'g')).toEqual(first.events.map(event => ({ ...event, gameId: 'g' })));
     expect(await loadGame(db, 'g', 'resume')).toMatchObject({ consistent: true, session: first });
 });
+
+it('same state reached by a different event history is refused', async () => {
+    const db = await fresh();
+    const initial = playGame(config, 'ordre-des-poses', { maxTurns: 0 });
+    const player = initial.state.players[initial.state.currentPlayerIndex];
+    if (!player) throw new Error('Joueur courant absent');
+    const move = getLegalMoves(initial.state, player.id).find(candidate => candidate.placements.length > 1);
+    if (!move) throw new Error('Coup à plusieurs galets attendu');
+    const action: GameAction = {
+        type: 'PLACE', actorId: player.id, expectedTurn: 0, actionId: 'premier-coup', placements: move.placements
+    };
+    const stored = submit(initial, action);
+    const alternate = submit(initial, { ...action, placements: [...action.placements].reverse() });
+    if (!stored.result.ok || !alternate.result.ok) throw new Error('Deux coups légaux attendus');
+    expect(stateHash(alternate.session.state)).toBe(stateHash(stored.session.state));
+    expect(alternate.result.event.hash).not.toBe(stored.result.event.hash);
+    await saveAll(db, 'g', stored.session, config);
+    const gameBefore = await rawGame(db, 'g');
+    const eventsBefore = await rawEvents(db, 'g');
+
+    const next = playMove(alternate.session, 0);
+    await expect(saveTurn(db, 'g', next, config, alternate.session.state)).rejects.toBeInstanceOf(StaleGameError);
+    expect(await rawGame(db, 'g')).toBe(gameBefore);
+    expect(await rawEvents(db, 'g')).toEqual(eventsBefore);
+});

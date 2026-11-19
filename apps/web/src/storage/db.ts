@@ -51,8 +51,16 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
         throw new StaleGameError();
     }
 
-    games.put(next);
     const journal = tx.objectStore('events');
+    const previousSeq = savedState.turnNumber - 1;
+    if (stored && previousSeq >= 0) {
+        const head = await req(journal.get([gameId, previousSeq]) as IDBRequest<StoredEvent | undefined>);
+        if (!head || head.hash !== session.events[previousSeq]?.hash) {
+            throw new StaleGameError();
+        }
+    }
+
+    games.put(next);
     if (stored) {
         // Inclut les tours restés en mémoire après un échec d’écriture.
         for (const event of session.events.slice(savedState.turnNumber)) {
