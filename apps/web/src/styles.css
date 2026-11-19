@@ -29,7 +29,7 @@ button.link { border: none; background: none; text-decoration: underline; }
 .error { color: var(--erreur); font-weight: 600; }
 .note { color: var(--encre-douce); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.play { display: grid; grid-template-columns: 1fr; gap: 8px; padding-top: 8px; }
+.play { display: grid; grid-template-columns: 1fr; gap: 8px; padding-top: 8px; padding-inline: 12px; }
 .status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* Cartes de score compactes : deux colonnes sur téléphone, nom sur deux lignes au plus (la fin, souvent ce qui
    distingue deux joueurs, reste visible ; au-delà, ellipse, et nom complet pour les lecteurs d'écran et dans
@@ -51,9 +51,11 @@ button.link { border: none; background: none; text-decoration: underline; }
 .zoom button { padding: 0; width: 44px; font-weight: 700; }
 .panel { display: flex; flex-direction: column; gap: 8px; }
 .cursor { margin: 0; color: var(--encre-douce); font-size: 0.9rem; }
-.hand { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
-.tile { padding: 2px; border-radius: 18px; aspect-ratio: 1; min-height: 44px; display: grid; place-items: center; background: transparent; }
-.tile.selected { border-color: var(--encre); border-width: 3px; transform: translateY(-4px); }
+/* Galets de la main assez grands pour que l'initiale du mode daltonien (un quart du galet) fasse 12 px au moins
+   sur un téléphone de 360 px : marges serrées, sans retrait intérieur ; au plus 30rem de large. */
+.hand { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-width: 30rem; }
+.tile { padding: 0; border-radius: 18px; aspect-ratio: 1; min-height: 44px; display: grid; place-items: center; background: transparent; }
+.tile.selected { border-color: var(--encre); box-shadow: 0 0 0 1px var(--encre); transform: translateY(-4px); }
 .tile.placed { opacity: 0.35; }
 .tile-img { width: 100%; height: 100%; max-width: 72px; }
 .hidden-hand { grid-column: 1 / -1; margin: 0; color: var(--encre-douce); }
