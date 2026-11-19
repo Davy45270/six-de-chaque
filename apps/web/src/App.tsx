@@ -83,7 +83,7 @@ export function App() {
             const me = currentPlayer(cur);
             if (!me || me.type !== 'human' || !client.current) return;
             void client.current.request({ type: 'REQUEST_HINT', gameHash: hashRef.current, view: projectPublicState(cur.session.state, me.id), hand: [...me.hand], playerId: me.id, level: 'intermediate', budgetNodes: 5000 }, () => hashRef.current)
-                .then(d => { const now = uiRef.current; if (d && now && d.action.type === 'PLACE') { setUi(setGhost(now, d.action.placements)); setAnnounce(`Indice : ${d.explanation}`); } });
+                .then(d => { const now = uiRef.current; if (d && now && d.move.type === 'PLACE') { setUi(setGhost(now, d.move.placements)); setAnnounce(`Indice : ${d.explanation}`); } });
             return;
         }
         const { state, submit: action } = reduce(cur, c);
@@ -104,7 +104,7 @@ export function App() {
             if (!now || !client.current) return;
             void client.current.request({ type: 'REQUEST_MOVES', gameHash: hashRef.current, view: projectPublicState(now.session.state, me.id), hand: [...me.hand], playerId: me.id,
                 level: me.aiLevel ?? 'beginner', budgetNodes: 20_000, passLegal: passLegal(now.session) }, () => hashRef.current)
-                .then(d => { if (d) apply(d.action); });
+                .then(d => { if (d) apply(d.move); });
         }, AI_DELAY_MS);
         return () => { clearTimeout(timer); client.current?.cancel(); };
     }, [turnKey, screen, apply]);

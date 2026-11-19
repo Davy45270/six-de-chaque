@@ -47,7 +47,7 @@ describe('ai host', () => {
         const again = client.request({ type: 'REQUEST_MOVES', gameHash: 'h2', view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'beginner', budgetNodes: 10_000 }, () => current);
         m.runAll();
         for (const p of m.posted.slice(1)) for (const l of listeners) l({ data: p });
-        await expect(again).resolves.toMatchObject({ action: { type: 'PLACE' } });
+        await expect(again).resolves.toMatchObject({ move: { type: 'PLACE' } });
         // Annuler côté client rend null tout de suite.
         const cancelled = client.request({ type: 'REQUEST_MOVES', gameHash: 'h3', view: pos.view, hand: pos.hand, playerId: pos.playerId, level: 'beginner', budgetNodes: 10_000 }, () => 'h3');
         client.cancel();
@@ -73,4 +73,18 @@ describe('ai host', () => {
         expect(b.decision).toEqual(a.decision);
         expect(b.requestId).toBe('c2');
     });
+});
+
+it('REQUEST_HINT is answered like REQUEST_MOVES with its own cache key', () => {
+    const m = manual();
+    m.host(request('move'));
+    expect(m.runAll()).toBeGreaterThan(0);
+    m.host({ ...request('hint'), type: 'REQUEST_HINT' } as ToWorker);
+    expect(m.runAll()).toBeGreaterThan(0);
+    m.host({ ...request('cached-hint'), type: 'REQUEST_HINT' } as ToWorker);
+    expect(m.runAll()).toBe(0);
+    const [move, hint, cached] = m.posted;
+    expect(move).toMatchObject({ type: 'RESULT', requestId: 'move', decision: { move: { type: 'PLACE' } } });
+    expect(hint).toEqual({ ...move, requestId: 'hint' });
+    expect(cached).toEqual({ ...hint, requestId: 'cached-hint' });
 });

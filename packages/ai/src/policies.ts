@@ -1,12 +1,15 @@
-// Politiques de l'ordinateur : il ne voit que la projection publique et sa propre main. Débutant : tirage pondéré
-// parmi les coups légaux ; intermédiaire : score immédiat moins 4 points par ligne de cinq laissée ouverte.
-// La décision est un itérateur : chaque `yield` rend le nombre de nœuds évalués depuis le précédent (annulation).
-import { canonicalJson, fnv1a64, getLegalMoves, randomInt, seedToState } from '@six-de-chaque/engine';
+// Décision à partir de la vue publique. Chaque suspension indique le nombre de nœuds depuis la précédente.
+import { canonicalJson, fnv1a64, getLegalMoves, isDeadPosition, randomInt, seedToState } from '@six-de-chaque/engine';
 import type { AiLevel, GameAction, GameState, Move, PublicGameState, Tile, TileId } from '@six-de-chaque/engine';
-import { calculateScore } from '@six-de-chaque/engine';
+import { advancedEvaluator, OPEN_FIVE_PENALTY, openFives } from './heuristics';
+import { EXPERT_CANDIDATES, simulateReplies } from './expert';
+import type { RankedMove } from './expert';
 
-export interface AiDecision { action: GameAction; explanation: string; evaluatedNodes: number; seed: string }
-export const OPEN_FIVE_PENALTY = 4;
+export { ADVANCED_DIVERSITY_WEIGHT, ADVANCED_MOBILITY_WEIGHT, OPEN_FIVE_PENALTY, openFives } from './heuristics';
+export interface AiDecision { move: GameAction; explanation: string; evaluatedNodes: number; seed: string }
+/** Au plus deux points disponibles et deux combinaisons couleur-glyphe dans la main. */
+export const EXCHANGE_SCORE_THRESHOLD = 2;
+export const EXCHANGE_DIVERSITY_THRESHOLD = 2;
 const SLICE = 64;
 
 /** État minimal reconstruit depuis la projection : la main des autres et la réserve restent inconnues. */
@@ -15,16 +18,6 @@ function pseudoState(view: PublicGameState, hand: readonly TileId[], playerId: s
         ...view, seed: '-', rngState: [0, 0, 0, 0], bag: [],
         players: view.players.map(({ handCount: _n, hand: _h, ...p }) => ({ ...p, hand: p.id === playerId ? [...hand] : [] }))
     };
-}
-
-/** Lignes de cinq créées ou prolongées par le coup et qu'une case libre à un bout permettrait de compléter. */
-export function openFives(view: Pick<PublicGameState, 'board'>, move: Move): number {
-    const after = new Set([...Object.keys(view.board), ...move.placements.map(p => `${p.x}:${p.y}`)]);
-    return calculateScore(view.board, move.placements).segments.filter(s => {
-        if (s.length !== 5) return false;
-        const [dx, dy] = s.axis === 'h' ? [1, 0] : [0, 1];
-        return !after.has(`${s.startX - dx}:${s.startY - dy}`) || !after.has(`${s.endX + dx}:${s.endY + dy}`);
-    }).length;
 }
 
 function exchangeChoice(tiles: readonly Tile[], bagCount: number): TileId[] {
@@ -49,38 +42,62 @@ export function* decide(view: PublicGameState, hand: readonly TileId[], playerId
     const base = { actorId: playerId, expectedTurn, actionId: `ordi-${expectedTurn}-${seed.slice(0, 8)}` };
     const tiles = hand.map(id => view.tilesById[id]).filter((t): t is Tile => t !== undefined);
     if (tiles.length !== hand.length) throw new Error('main inconnue');
-    const moves = getLegalMoves(pseudoState(view, hand, playerId), playerId);
+    const state = pseudoState(view, hand, playerId);
+    const budget = Number.isFinite(budgetNodes) ? Math.max(0, Math.floor(budgetNodes)) : 0;
+    const rankingBudget = level === 'expert' && budget >= 16 ? budget - Math.floor(budget / 2) : budget;
+    // Une pose de secours reste disponible pour une demande à budget nul.
+    const moves = getLegalMoves(state, playerId, Math.max(1, rankingBudget));
     if (moves.length === 0) {
-        if (passLegal || view.bagCount === 0) return { action: { ...base, type: 'PASS' }, explanation: 'Aucune pose possible : je passe.', evaluatedNodes: 0, seed };
+        // Toutes les tuiles hors plateau constituent l'union des mains adverses et de la réserve.
+        const onBoard = new Set(Object.values(view.board));
+        const dead = () => isDeadPosition({ ...state, bag: Object.keys(view.tilesById).filter(id => !onBoard.has(id)) });
+        if (passLegal || view.bagCount === 0 || dead()) {
+            return { move: { ...base, type: 'PASS' }, explanation: 'Aucune pose possible, je passe.', evaluatedNodes: 0, seed };
+        }
         const tileIds = exchangeChoice(tiles, view.bagCount);
-        return { action: { ...base, type: 'EXCHANGE', tileIds }, explanation: `Aucune pose possible : j’échange ${tileIds.length} tuile(s).`, evaluatedNodes: 0, seed };
+        return { move: { ...base, type: 'EXCHANGE', tileIds }, explanation: `Aucune pose possible, j’échange ${tileIds.length} tuile(s).`, evaluatedNodes: 0, seed };
     }
-    const budget = Math.max(1, budgetNodes);
-    const values: Array<{ move: Move; value: number }> = [];
+    const advance = level === 'advanced' || level === 'expert' ? advancedEvaluator(view, tiles) : null;
+    const values: RankedMove[] = [];
     let pending = 0;
-    for (const move of moves) {
-        if (values.length >= budget) break;
-        values.push({ move, value: level === 'beginner' ? 1 + 0.2 * move.score : move.score - OPEN_FIVE_PENALTY * openFives(view, move) });
+    for (const move of moves.slice(0, rankingBudget)) {
+        const value = advance ? advance(move) : level === 'beginner' ? 10 + 2 * move.score : move.score - OPEN_FIVE_PENALTY * openFives(view, move);
+        values.push({ move, value });
         if (++pending >= SLICE) { yield pending; pending = 0; }
     }
     if (pending) yield pending;
-    let chosen: Move;
-    if (level === 'beginner') {
-        const scale = 10;
-        const weights = values.map(v => Math.round(v.value * scale));
-        const total = weights.reduce((a, b) => a + b, 0);
+    let evaluatedNodes = values.length;
+    let chosen = moves[0] as Move;
+    const diverseKinds = new Set(tiles.map(t => t.color * 6 + t.shape)).size;
+    if (level !== 'beginner' && view.phase === 'playing' && view.bagCount > 0 && diverseKinds <= EXCHANGE_DIVERSITY_THRESHOLD
+        && moves.length < rankingBudget && values.length > 0 && moves.every(m => m.score <= EXCHANGE_SCORE_THRESHOLD)) {
+        const tileIds = exchangeChoice(tiles, tiles.length);
+        if (tileIds.length <= view.bagCount) {
+            return { move: { ...base, type: 'EXCHANGE', tileIds }, explanation: `La pose rapporte peu, j’échange ${tileIds.length} tuile(s).`, evaluatedNodes, seed };
+        }
+    }
+    if (level === 'beginner' && values.length) {
+        const total = values.reduce((a, b) => a + b.value, 0);
         const [draw] = randomInt(total, seedToState(seed));
         let acc = 0;
-        let index = weights.findIndex(w => (acc += w) > draw);
-        if (index < 0) index = 0;
-        chosen = (values[index] as { move: Move }).move;
-    } else {
-        const best = values.reduce((a, b) => (b.value > a.value || (b.value === a.value && b.move.key < a.move.key) ? b : a));
-        chosen = best.move;
+        chosen = values.find(v => (acc += v.value) > draw)?.move ?? chosen;
+    } else if (values.length) {
+        values.sort((a, b) => b.value - a.value || (a.move.key < b.move.key ? -1 : 1));
+        chosen = (values[0] as RankedMove).move;
+        if (level === 'expert') {
+            const search = simulateReplies(view, hand, base, values.slice(0, EXPERT_CANDIDATES), seed, budget - evaluatedNodes);
+            let result = search.next();
+            while (!result.done) {
+                evaluatedNodes += result.value;
+                yield result.value;
+                result = search.next();
+            }
+            chosen = result.value;
+        }
     }
     const opens = openFives(view, chosen);
     const explanation = `${chosen.placements.length} tuile(s) pour ${chosen.score} point(s)${opens ? `, ${opens} ligne(s) de cinq ouverte(s)` : ''}.`;
-    return { action: { ...base, type: 'PLACE', placements: chosen.placements.map(p => ({ ...p })) }, explanation, evaluatedNodes: values.length, seed };
+    return { move: { ...base, type: 'PLACE', placements: chosen.placements.map(p => ({ ...p })) }, explanation, evaluatedNodes, seed };
 }
 
 /** Joue la décision jusqu'au bout (tests, outils). */

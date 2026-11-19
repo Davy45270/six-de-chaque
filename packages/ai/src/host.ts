@@ -1,5 +1,5 @@
 // Hôte de recherche (côté Worker) : découpe la décision en tranches de nœuds, s'arrête sur CANCEL,
-// garde un cache LRU de 64 décisions par empreinte de partie + joueur + niveau.
+// garde un cache LRU de 64 décisions par empreinte de partie + joueur + niveau + type de demande + budget.
 import { decide } from './policies';
 import type { AiDecision } from './policies';
 import type { AiRequest, FromWorker, ToWorker } from './protocol';
@@ -20,7 +20,7 @@ export function createAiHost(post: (m: FromWorker) => void, schedule: (fn: () =>
         if (m.type === 'CANCEL') { cancelled.add(m.requestId); return; }
         const bad = malformed(m);
         if (bad) { post({ type: 'ERROR', requestId: m.requestId, message: bad }); return; }
-        const key = `${m.gameHash}|${m.playerId}|${m.level}|${m.type}`;
+        const key = `${m.gameHash}|${m.playerId}|${m.level}|${m.type}|${m.budgetNodes}|${m.passLegal ?? false}`;
         const hit = cache.get(key);
         if (hit) {
             cache.delete(key); cache.set(key, hit);
