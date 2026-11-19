@@ -101,3 +101,44 @@ test('the V shortcut brings the top of the game back', async ({ page }) => {
     await expectBackOnTop(page);
     await expect(page.getByTestId('history')).toContainText('Toi');
 });
+
+// Une fin de tour refusée (rien n'est joué) ne déplace ni la vue ni le focus ; le refus est annoncé.
+async function expectRefused(page: Page, key: string, message: string | RegExp): Promise<void> {
+    const before = await page.evaluate(() => ({ scrollY: Math.round(window.scrollY), focus: document.activeElement?.outerHTML.slice(0, 80) ?? '' }));
+    console.log(`avant ${key} : ${JSON.stringify(before)}`);
+    expect(before.scrollY, 'page non défilée avant le coup').toBeGreaterThan(0);
+    await page.keyboard.press(key);
+    await expect(page.getByTestId('announce')).toHaveText(message);
+    const after = await page.evaluate(() => ({ scrollY: Math.round(window.scrollY), focus: document.activeElement?.outerHTML.slice(0, 80) ?? '' }));
+    console.log(`après ${key} : ${JSON.stringify(after)}`);
+    expect(after.scrollY, 'la vue a bougé alors que rien n’a été joué').toBe(before.scrollY);
+    expect(after.focus, 'le focus a bougé alors que rien n’a été joué').toBe(before.focus);
+    await expect(page.locator('.board')).not.toBeFocused();
+}
+
+test('a refused V from a scrolled page leaves the scroll and focus where they were', async ({ page }) => {
+    await deadPosition(page);
+    await expect(page.getByRole('button', { name: 'Valider' })).toBeDisabled();
+    await page.getByTestId('history').scrollIntoViewIfNeeded();
+    await expectRefused(page, 'v', 'Aucun coup prévu');
+});
+
+test('a refused P from a scrolled page leaves the scroll and focus where they were', async ({ page }) => {
+    await openApp(page, 'clavier');
+    await newGame(page);
+    await myTurn(page);
+    await expect(board(page)).toBeVisible();
+    // Une pose est possible : Passer n'est pas proposé.
+    await expect(page.getByRole('button', { name: 'Passer' })).toHaveCount(0);
+    await page.getByTestId('history').scrollIntoViewIfNeeded();
+    await expectRefused(page, 'p', 'Passer n’est pas permis');
+});
+
+test('a refused Enter with no tile to exchange leaves the scroll and focus where they were', async ({ page }) => {
+    await deadPosition(page);
+    await page.keyboard.press('e');
+    await expect(page.getByRole('button', { name: 'Confirmer l’échange' })).toBeDisabled();
+    await page.getByTestId('history').scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BUTTON');
+    await expectRefused(page, 'Enter', 'Échange : aucune tuile choisie');
+});
