@@ -58,3 +58,59 @@ test('the reserve order for seed clavier matches the reference vector in the bro
         for (const id of opponent) expect([...(CLAVIER_HANDS[1] ?? []), ...CLAVIER_BAG.slice(0, drawn)]).toContain(id);
     }
 });
+
+interface SavedEvent { seq: number; action: { type: string; actorId: string; placements?: Array<{ tileId: string }> } }
+
+// L'ORDRE des mains, pas seulement leur contenu : la main humaine affichée et enregistrée est la main de référence
+// tuile par tuile ; celle de l'ordinateur aussi s'il n'a pas joué. S'il a ouvert, sa main est ses tuiles restantes
+// dans leur ordre d'origine, suivies des tuiles piochées dans l'ordre de la réserve de référence.
+test('the first hand drawn for seed clavier matches the reference vector in order', async ({ page }) => {
+    await openApp(page, 'clavier');
+    await newGame(page);
+    await myTurn(page);
+    await expect(board(page)).toBeVisible();
+    const read = (): Promise<{ snapshots: SavedSnapshot[]; events: SavedEvent[] }> => page.evaluate(() => new Promise(resolve => {
+        const empty = { snapshots: [], events: [] };
+        const open = indexedDB.open('six-de-chaque');
+        open.onerror = () => { resolve(empty); };
+        open.onsuccess = () => {
+            const db = open.result;
+            if (!db.objectStoreNames.contains('games') || !db.objectStoreNames.contains('events')) { db.close(); resolve(empty); return; }
+            const tx = db.transaction(['games', 'events']);
+            const games = tx.objectStore('games').getAll();
+            const events = tx.objectStore('events').getAll();
+            tx.oncomplete = () => {
+                db.close();
+                resolve({ snapshots: (games.result as Array<{ snapshot: SavedSnapshot }>).map(g => g.snapshot), events: events.result as SavedEvent[] });
+            };
+            tx.onerror = () => { db.close(); resolve(empty); };
+        };
+    }));
+    await expect.poll(async () => (await read()).snapshots.map(s => s.currentPlayerIndex), { timeout: 15_000 }).toEqual([0]);
+    const { snapshots: [snapshot], events } = await read();
+    if (!snapshot) throw new Error('instantané absent');
+    const [human, computer] = CLAVIER_HANDS;
+    if (!human || !computer) throw new Error('vecteur de référence');
+    // Main humaine : ordre exact, à l'écran comme dans l'instantané.
+    expect(await handIds(page)).toEqual(human);
+    expect(snapshot.players[0]?.hand).toEqual(human);
+    const opponent = snapshot.players[1]?.hand;
+    if (snapshot.turnNumber === 0) {
+        expect(events).toEqual([]);
+        expect(opponent).toEqual(computer);
+        return;
+    }
+    // L'ordinateur a ouvert : un seul coup, une pose, enregistrée au journal.
+    expect(snapshot.turnNumber).toBe(1);
+    expect(events).toHaveLength(1);
+    const [opening] = events;
+    expect(opening?.seq).toBe(0);
+    expect(opening?.action.type).toBe('PLACE');
+    const placed = new Set((opening?.action.placements ?? []).map(p => p.tileId));
+    expect(placed.size).toBeGreaterThan(0);
+    for (const id of placed) expect(computer).toContain(id);
+    const drawn = CLAVIER_BAG.length - snapshot.bag.length;
+    expect(drawn).toBe(placed.size);
+    expect(opponent).toEqual([...computer.filter(id => !placed.has(id)), ...CLAVIER_BAG.slice(0, drawn)]);
+    expect(snapshot.bag).toEqual(CLAVIER_BAG.slice(drawn));
+});

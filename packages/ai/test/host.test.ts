@@ -241,3 +241,20 @@ it('the client ignores a result whose gameHash does not match the current state'
     deliver({ type: 'RESULT', requestId: id, gameHash: 'h1', decision });
     await expect(answer).resolves.toEqual({ status: 'stale' });
 });
+
+it('the move cache key changes with passLegal alone', () => {
+    // Même empreinte, joueur, niveau, type de demande et budget : seul le droit de passer change.
+    for (const [first, second] of [[false, true], [true, false]] as const) {
+        const m = manual();
+        m.host({ ...request(`passe-${String(first)}`), passLegal: first });
+        expect(m.runAll()).toBeGreaterThan(0);
+        m.host({ ...request(`passe-${String(second)}`), passLegal: second });
+        expect(m.queue, 'droit de passer différent : nouvelle recherche, pas le cache').toHaveLength(1);
+        m.runAll();
+        const [a, b] = m.posted;
+        if (a?.type !== 'RESULT' || b?.type !== 'RESULT') throw new Error('deux résultats attendus');
+        expect(a.decision.move.type).toBe(first ? 'PASS' : 'PLACE');
+        expect(b.decision.move.type).toBe(second ? 'PASS' : 'PLACE');
+        expect(b.requestId).toBe(`passe-${String(second)}`);
+    }
+});

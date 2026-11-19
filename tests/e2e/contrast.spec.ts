@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { COLORS, COLORS_HIGH_CONTRAST, INK, TILE_BG, TILE_BG_HIGH_CONTRAST, contrastRatio } from '../../packages/renderer-pixi/src/palette';
 import { tileSvg } from '../../packages/renderer-pixi/src/art';
+import { cellToScreen, fitBoard } from '../../packages/renderer-pixi/src/camera';
+import { handTiles, newGame, tapCentre } from './helpers';
 
 // Contrastes mesurés sur les couleurs effectives : getComputedStyle de chaque texte et contrôle visible, fonds et
 // opacités des ancêtres composés ; glyphes lus dans le SVG des galets (DOM et source du rendu).
@@ -191,4 +193,100 @@ test('every interactive target is at least 44 by 44 px', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Partie terminée' })).toBeVisible();
     await measure('fin');
     expect(small, small.join('\n')).toEqual([]);
+});
+
+/** Côté d'une case du plateau en pixels de monde (`CELL_PX` de board-view.ts, non importé : il charge PixiJS). */
+const CELL_PX = 64;
+
+interface Probe { what: string; x0: number; y0: number; x1: number; y1: number }
+
+/**
+ * Lit les pixels d'une capture PNG dans la page (canvas 2D) : pour chaque fenêtre (pixels de la capture), la couleur
+ * de son pixel le plus sombre (luminance relative WCAG), en « #RRGGBB ».
+ */
+async function darkestPixels(page: Page, png: Buffer, probes: Probe[]): Promise<string[]> {
+    return page.evaluate(async ({ b64, probes }) => {
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width; canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) throw new Error('canvas 2D');
+        ctx.drawImage(bitmap, 0, 0);
+        const lin = (v: number): number => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+        const hex = (r: number, g: number, b: number): string => `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+        return probes.map(p => {
+            const x0 = Math.max(0, Math.floor(p.x0)), y0 = Math.max(0, Math.floor(p.y0));
+            const x1 = Math.min(bitmap.width - 1, Math.ceil(p.x1)), y1 = Math.min(bitmap.height - 1, Math.ceil(p.y1));
+            const data = ctx.getImageData(x0, y0, x1 - x0 + 1, y1 - y0 + 1).data;
+            let best = '#ffffff', lum = Infinity;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i]!, g = data[i + 1]!, b = data[i + 2]!;
+                const l = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+                if (l < lum) { lum = l; best = hex(r, g, b); }
+            }
+            return best;
+        });
+    }, { b64: png.toString('base64'), probes });
+}
+
+// Le canevas du plateau en contraste élevé, lu pixel par pixel sur une capture : points de grille, contour du
+// curseur, intérieur (glyphe) et contour d'une tuile fantôme, chacun à 3:1 au moins contre le fond du plateau.
+// Positions tirées de board-view.ts : plateau vide, fantôme en (0, 0), caméra cadrée par fitBoard sur le fantôme,
+// d'où le centre de la case (0, 0) au centre du canevas ; curseur déplacé en (1, 0) d'une touche, case vide.
+test('in high contrast the board canvas pixels show the grid, cursor and ghost at 3:1 or more', async ({ page }) => {
+    test.setTimeout(90_000);
+    await setAppearance(page, true, false);
+    await expect(page.locator('html')).toHaveClass(/\bhc\b/);
+    // Deux humains : le plateau est vide au premier tour, quel que soit le premier joueur.
+    await newGame(page, ['human', 'human']);
+    await page.getByRole('button', { name: /^C’est moi/ }).click();
+    const b = page.locator('.board[data-ready="oui"]');
+    await expect(b).toHaveAttribute('data-tiles', '0');
+    await handTiles(page).first().click();
+    await tapCentre(page);
+    await expect(b).toHaveAttribute('data-ghost', '1');
+    await expect(b).toHaveAttribute('data-cursor', '0:0');
+    const canvas = b.locator('canvas');
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('canevas absent');
+    const camera = fitBoard({}, box.width, box.height, CELL_PX, [{ x: 0, y: 0 }]);
+    const s = CELL_PX * camera.zoom;
+    const at = (x: number, y: number): { px: number; py: number } => cellToScreen(camera, x, y, CELL_PX);
+    // Sans tuile choisie, toucher une case vide y déplace le curseur sans rien poser.
+    const right = at(1.5, 0.5);
+    await canvas.click({ position: { x: right.px, y: right.py } });
+    await expect(b).toHaveAttribute('data-cursor', '1:0');
+    await expect(b).toHaveAttribute('data-ghost', '1');
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await page.waitForTimeout(200);
+
+    const png = await canvas.screenshot({ animations: 'disabled' });
+    const width = png.readUInt32BE(16);
+    const k = width / box.width;   // pixels de capture par pixel CSS
+    // Une fenêtre en pixels CSS, convertie en pixels de capture.
+    const win = (what: string, cx: number, cy: number, rx: number, ry: number): Probe =>
+        ({ what, x0: (cx - rx) * k, y0: (cy - ry) * k, x1: (cx + rx) * k, y1: (cy + ry) * k });
+
+    const ghost = at(0, 0), cursor = at(1, 0), dot = at(-1 + 0.5, 0 + 0.5), empty = at(-2, -1);
+    const cursorWidth = Math.max(3, s * 0.08), ghostWidth = Math.max(2, s * 0.075);
+    const probes: Probe[] = [
+        // Fond : un petit carré au quart d'une case vide, loin de son point de grille (au centre de la case).
+        win('fond', empty.px + s * 0.2, empty.py + s * 0.2, 0.5, 0.5),
+        // Point de grille de la case vide (-1, 0) : disque de rayon max(1, 0,03 s) en son centre.
+        win('point de grille', dot.px, dot.py, 1, 1),
+        // Curseur en (1, 0) : bord haut de roundRect(px + 1, py + 1, s - 2, s - 2), au milieu, sur un quart de trait.
+        win('contour du curseur', cursor.px + s / 2, cursor.py + 1, 1, cursorWidth / 4),
+        // Fantôme en (0, 0) : bord gauche de roundRect(px + 0,13 s, …, 0,74 s), à mi-hauteur, sur un quart de trait.
+        win('contour du fantôme', ghost.px + s * 0.13, ghost.py + s / 2, ghostWidth / 4, 1),
+        // Intérieur du fantôme : le glyphe, au centre du galet.
+        win('intérieur du fantôme', ghost.px + s / 2, ghost.py + s / 2, s * 0.2, s * 0.2)
+    ];
+    const [background, ...marks] = await darkestPixels(page, png, probes);
+    if (!background) throw new Error('fond non lu');
+    // Le fond lu est bien celui du plateau en contraste élevé (blanc), pas un élément peint.
+    expect(contrastRatio(background, '#FFFFFF'), `fond lu ${background}`).toBeLessThan(1.1);
+    const lows = marks.map((colour, i) => ({ what: `${probes[i + 1]?.what ?? '?'} ${colour} sur ${background}`, ratio: contrastRatio(colour, background) }))
+        .filter(m => m.ratio < 3);
+    expect(lows, report(lows)).toEqual([]);
 });
