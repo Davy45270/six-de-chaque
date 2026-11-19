@@ -47,15 +47,21 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
     const tx = db.transaction(finished ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
     const games = tx.objectStore('games');
     const stored = await req(games.get(gameId) as IDBRequest<StoredGame | undefined>);
-    if (!stored || stored.updatedTurn !== savedState.turnNumber || stored.checksum !== previousChecksum) {
+    if (stored && (stored.updatedTurn !== savedState.turnNumber || stored.checksum !== previousChecksum)) {
         throw new StaleGameError();
     }
 
     games.put(next);
     const journal = tx.objectStore('events');
-    // Inclut les tours restés en mémoire après un échec d’écriture.
-    for (const event of session.events.slice(savedState.turnNumber)) {
-        journal.add({ ...event, gameId } satisfies StoredEvent);
+    if (stored) {
+        // Inclut les tours restés en mémoire après un échec d’écriture.
+        for (const event of session.events.slice(savedState.turnNumber)) {
+            journal.add({ ...event, gameId } satisfies StoredEvent);
+        }
+    } else {
+        for (const event of session.events) {
+            journal.put({ ...event, gameId } satisfies StoredEvent);
+        }
     }
     if (finished) {
         const settings = tx.objectStore('settings');

@@ -122,6 +122,45 @@ function playNextTurn(session: Session): void {
     clickButton('Valider');
 }
 
+it('a failed initial save is repaired by the first turn, not treated as another tab', async () => {
+    const initialSave = vi.spyOn(storage, 'saveAll').mockRejectedValueOnce(new DOMException('Quota dépassé', 'QuotaExceededError'));
+    const save = vi.spyOn(storage, 'saveTurn');
+    const list = vi.spyOn(storage, 'listGames');
+    const db = await openDb();
+    try {
+        mount();
+        await act(async () => {
+            await vi.waitFor(() => expect(list).toHaveBeenCalledOnce());
+            await list.mock.results[0]?.value;
+        });
+        clickButton('Nouvelle partie');
+        const secondPlayerKind = host.querySelectorAll('fieldset select')[1] as HTMLSelectElement;
+        act(() => {
+            secondPlayerKind.value = 'human';
+            secondPlayerKind.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        clickButton('Commencer');
+        await act(async () => {
+            await vi.waitFor(() => expect(initialSave).toHaveBeenCalledOnce());
+            await expect(initialSave.mock.results[0]?.value).rejects.toMatchObject({ name: 'QuotaExceededError' });
+        });
+        const [, id, initial] = initialSave.mock.calls[0]!;
+        expect(await listGames(db)).toEqual([]);
+
+        playNextTurn(initial);
+        await act(async () => {
+            await vi.waitFor(() => expect(save).toHaveBeenCalledOnce());
+            await expect(save.mock.results[0]?.value).resolves.toBeUndefined();
+        });
+        const first = save.mock.calls[0]?.[2];
+        expect(first?.events).toHaveLength(1);
+        expect(await loadGame(db, id, 'resume')).toMatchObject({ consistent: true, session: first });
+        expect(host.querySelector('main.home')).toBeNull();
+    } finally {
+        db.close();
+    }
+});
+
 it('a turn written from a stale tab is refused and the saved journal stays intact', async () => {
     const config = { players: configOf(2).players.map(p => ({ ...p, type: 'human' as const })) };
     const seed = 'onglets';
