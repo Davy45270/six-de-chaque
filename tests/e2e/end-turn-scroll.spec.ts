@@ -108,12 +108,12 @@ async function expectRefused(page: Page, key: string, message: string | RegExp):
     console.log(`avant ${key} : ${JSON.stringify(before)}`);
     expect(before.scrollY, 'page non défilée avant le coup').toBeGreaterThan(0);
     await page.keyboard.press(key);
-    await expect(page.getByTestId('announce')).toHaveText(message);
     const after = await page.evaluate(() => ({ scrollY: Math.round(window.scrollY), focus: document.activeElement?.outerHTML.slice(0, 80) ?? '' }));
     console.log(`après ${key} : ${JSON.stringify(after)}`);
     expect(after.scrollY, 'la vue a bougé alors que rien n’a été joué').toBe(before.scrollY);
     expect(after.focus, 'le focus a bougé alors que rien n’a été joué').toBe(before.focus);
     await expect(page.locator('.board')).not.toBeFocused();
+    await expect(page.getByTestId('announce')).toHaveText(message);
 }
 
 test('a refused V from a scrolled page leaves the scroll and focus where they were', async ({ page }) => {
