@@ -42,7 +42,7 @@ describe('ai games terminate', () => {
             longest = Math.max(longest, s.state.turnNumber);
         }
         console.info(`terminaison : ${RUNS} parties, plus longue ${longest} coups`);
-    }, 600_000);
+    }, Math.max(600_000, RUNS * 2_000));
 
     it('one human against three computers plays to the end', () => {
         const session = playAi('quatre-joueurs', ['human', 'intermediate', 'advanced', 'expert']);
