@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import blocked from '../../../tests/fixtures/blocked.json';
 import { canonicalJson, eventHash, fnv1a64, GENESIS_HASH, replay, stateHash } from '@six-de-chaque/engine';
 import type { Session } from '@six-de-chaque/engine';
-import { listGames, loadGame, openDb, saveAll, saveTurn, getSetting, setSetting, deleteGame } from '../src/storage/db';
+import { listGames, loadGame, openDb, saveAll, saveTurn, getSetting, setSetting, deleteGame, completeChallenge } from '../src/storage/db';
 import { migrate, migrateSave, SaveError } from '../src/storage/migrations';
 import { exportGame, importGame, parseExport } from '../src/storage/transfer';
 import { configOf, playGame } from '../../../packages/engine/test/play';
@@ -143,6 +143,12 @@ describe('storage', () => {
         expect(() => migrate({ ...game(0).state, version: 9 })).toThrow(SaveError);
         expect(() => migrateSave({ ...blocked, version: 9 })).toThrow(SaveError);
         expect(parseExport(JSON.stringify({ ...blocked, version: 9 })).ok).toBe(false);
+    });
+    it('keeps distinct challenge completions across concurrent updates', async () => {
+        const db = await fresh();
+        await Promise.all([completeChallenge(db, 'rivage'), completeChallenge(db, 'dune'), completeChallenge(db, 'rivage')]);
+        expect(await getSetting(db, 'completedChallenges')).toEqual(['rivage', 'dune']);
+        db.close();
     });
     it('settings persist', async () => {
         const db = await fresh();

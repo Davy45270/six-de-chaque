@@ -1,6 +1,6 @@
 // Art original (CC BY 4.0, David Sevin) : six glyphes dessinés pour le jeu sur une grille 24 × 24, un galet clair
 // aux coins très arrondis, un motif de fond par couleur. Décrit une fois, servi au plateau PixiJS et au DOM.
-import { COLORS, COLORS_HIGH_CONTRAST, INK, TILE_BG, TILE_BG_HIGH_CONTRAST } from './palette';
+import { COLOR_NAMES, COLORS, COLORS_HIGH_CONTRAST, INK, TILE_BG, TILE_BG_HIGH_CONTRAST } from './palette';
 
 export interface Glyph { id: string; d: string; stroke?: boolean }
 export const GLYPHS: readonly Glyph[] = [
@@ -25,7 +25,9 @@ function pattern(index: number, color: string): string {
 }
 
 /** SVG complet d'un galet (64 × 64 unités), rendu à `px` pixels. */
-export function tileSvg(color: number, shape: number, opts: { highContrast?: boolean; px?: number } = {}): string {
+export interface TileAppearance { highContrast?: boolean; colourBlind?: boolean }
+
+export function tileSvg(color: number, shape: number, opts: TileAppearance & { px?: number } = {}): string {
     const c = (opts.highContrast ? COLORS_HIGH_CONTRAST : COLORS)[color] ?? '#000000';
     const bg = opts.highContrast ? TILE_BG_HIGH_CONTRAST : TILE_BG;
     const g: Glyph = GLYPHS[shape] ?? { id: '?', d: '' };
@@ -37,9 +39,14 @@ export function tileSvg(color: number, shape: number, opts: { highContrast?: boo
     const glyph = g.stroke
         ? `<path d="${g.d}" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><path d="${g.d}" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>`
         : `<path d="${g.d}" fill="${c}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    const initial = opts.colourBlind ? COLOR_NAMES[color]?.[0]?.toUpperCase() : undefined;
+    const letter = initial
+        ? `<rect x="23" y="43" width="18" height="17" rx="5" fill="${bg}"/><text x="32" y="57" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="${INK}">${initial}</text>`
+        : '';
+    const transform = initial ? 'translate(15 8) scale(1.42)' : 'translate(13 13) scale(1.583)';
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${px}" height="${px}"><defs>${defs}</defs>`
         + `<rect x="3" y="3" width="58" height="58" rx="18" fill="${bg}" stroke="${opts.highContrast ? INK : '#B9A57E'}" stroke-width="${opts.highContrast ? 3 : 2}"/>`
-        + `${solid}${fillPattern}${ring}<g transform="translate(13 13) scale(1.583)">${glyph}</g></svg>`;
+        + `${solid}${fillPattern}${ring}<g transform="${transform}">${glyph}</g>${letter}</svg>`;
 }
 
 export const svgDataUrl = (svg: string): string => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

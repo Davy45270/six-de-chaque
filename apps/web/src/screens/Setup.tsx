@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { GameConfig } from '@six-de-chaque/engine';
+import type { AiLevel, GameConfig } from '@six-de-chaque/engine';
 
-type Kind = 'human' | 'beginner' | 'intermediate';
+type Kind = 'human' | AiLevel;
 const DEFAULT_NAMES = ['Toi', 'Ordinateur', 'Joueur 3', 'Joueur 4'];
 export function Setup({ onStart, onBack }: { onStart(config: GameConfig): void; onBack(): void }) {
     const [count, setCount] = useState(2);
@@ -35,6 +35,8 @@ export function Setup({ onStart, onBack }: { onStart(config: GameConfig): void; 
                             <option value="human">Humain</option>
                             <option value="beginner">Ordinateur débutant</option>
                             <option value="intermediate">Ordinateur intermédiaire</option>
+                            <option value="advanced">Ordinateur avancé</option>
+                            <option value="expert">Ordinateur expert</option>
                         </select>
                     </label>
                 </fieldset>

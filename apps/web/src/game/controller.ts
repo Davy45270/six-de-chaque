@@ -1,11 +1,11 @@
 // Contrôleur pur de l'interface : sélection, fantôme, score prévisionnel, échange, passe, curseur clavier.
 // Il ne modifie jamais la partie : il propose une action (`submit`) que l'application soumet au moteur.
-import { calculateScore, cellKey, validateAction, validatePlacements } from '@six-de-chaque/engine';
+import { calculateScore, cellKey, FINAL_BONUS, validateAction, validatePlacements } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, Placement, ScoreBreakdown, Session, TileId } from '@six-de-chaque/engine';
 
 export interface UiState {
     session: Session; config: GameConfig; gameId: string;
-    selected: TileId | null; ghost: Placement[]; preview: ScoreBreakdown | null; previewError: string | null;
+    selected: TileId | null; ghost: Placement[]; preview: (ScoreBreakdown & { finalBonus: number }) | null; previewError: string | null;
     mode: 'place' | 'exchange'; exchangeSel: TileId[]; cursor: { x: number; y: number }; aiThinking: boolean; handoverFor: string | null;
 }
 export type UiCommand = { t: 'select'; tileId: TileId } | { t: 'placeAt'; x: number; y: number } | { t: 'undoGhost' } | { t: 'clearGhost' }
@@ -39,8 +39,13 @@ export function initialUi(session: Session, config: GameConfig, gameId: string):
 
 function withGhost(s: UiState, ghost: Placement[]): UiState {
     if (ghost.length === 0) return { ...s, ghost, preview: null, previewError: null };
-    const v = validatePlacements(s.session.state, currentPlayer(s)?.hand ?? [], ghost);
-    return v.ok ? { ...s, ghost, preview: calculateScore(s.session.state.board, ghost), previewError: null } : { ...s, ghost, preview: null, previewError: v.detail };
+    const game = s.session.state;
+    const hand = currentPlayer(s)?.hand ?? [];
+    const v = validatePlacements(game, hand, ghost);
+    if (!v.ok) return { ...s, ghost, preview: null, previewError: v.detail };
+    const score = calculateScore(game.board, ghost);
+    const finalBonus = game.bag.length === 0 && ghost.length === hand.length ? FINAL_BONUS : 0;
+    return { ...s, ghost, preview: { ...score, total: score.total + finalBonus, finalBonus }, previewError: null };
 }
 
 /** Pose un fantôme proposé (indice), avec son score prévisionnel. */

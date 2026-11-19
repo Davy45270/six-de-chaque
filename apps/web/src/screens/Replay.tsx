@@ -5,7 +5,7 @@ import { Board } from '../components';
 import { describeEvent } from '../game/describe';
 
 /** Rejeu pas à pas, accessible seulement une fois la partie finie. */
-export function Replay({ config, seed, events, highContrast, onBack }: { config: GameConfig; seed: string; events: readonly GameEvent[]; highContrast: boolean; onBack(): void }) {
+export function Replay({ config, seed, events, highContrast, colourBlind, onBack }: { config: GameConfig; seed: string; events: readonly GameEvent[]; highContrast: boolean; colourBlind: boolean; onBack(): void }) {
     const states = useMemo(() => {
         const out: GameState[] = [createGame(config, seed)];
         for (const e of events) { const t = applyAction(out[out.length - 1] as GameState, e.action, e.prevHash); if (t.ok) out.push(t.state); else break; }
@@ -18,7 +18,7 @@ export function Replay({ config, seed, events, highContrast, onBack }: { config:
         <main className="screen replay">
             <h1>Rejeu</h1>
             <p aria-live="polite" data-testid="replay-step">Coup {step} sur {states.length - 1}{event ? ` — ${describeEvent(event, config, state.tilesById)}` : ' — début de la partie'}</p>
-            <Board board={state.board} ghost={[]} cursor={null} tiles={state.tilesById} highContrast={highContrast} label={`Plateau au coup ${step}`} />
+            <Board board={state.board} ghost={[]} cursor={null} tiles={state.tilesById} highContrast={highContrast} colourBlind={colourBlind} label={`Plateau au coup ${step}`} />
             <p className="scores">{state.players.map(p => `${p.name} ${p.score}`).join(' · ')}</p>
             <div className="menu row">
                 <button type="button" onClick={() => { setStep(0); }} disabled={step === 0}>Début</button>

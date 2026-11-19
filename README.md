@@ -39,7 +39,7 @@ npm ci && npm run lint && npm run typecheck && npm test && npm run build && npm 
 - **Expert** compare les meilleurs coups de l’Avancé sur des répartitions plausibles des tuiles cachées. Il simule
   une réponse adverse par répartition, avec un budget en nœuds. La même vue et le même budget donnent la même décision.
 
-Le moteur permet de configurer les quatre niveaux. L’écran de configuration propose débutant et intermédiaire.
+L’écran de configuration propose les quatre niveaux.
 Les niveaux intermédiaire, avancé et expert peuvent échanger en cours de partie si le meilleur placement
 rapporte au plus deux points, si la main contient au plus deux combinaisons de couleur et de glyphe et si
 la réserve couvre l’échange.
@@ -59,6 +59,11 @@ sur des plateaux synthétiques de 108 et 200 tuiles. `packages/ai/test/bench.tes
 décisions et les nœuds évalués pour chaque niveau sur trois positions de référence.
 
 ## Défis
+
+Le bouton « Défis » de l’accueil ouvre la campagne par palier. Chaque essai indique l’objectif et le nombre
+de tours disponibles. L’écran de résultat permet de réessayer et de revoir une solution, pose par pose.
+La progression et les réglages « Contraste élevé » et « Mode daltonien » sont enregistrés dans IndexedDB.
+Le mode daltonien ajoute l’initiale de la couleur à côté du glyphe et du motif.
 
 `@six-de-chaque/puzzles` extrait le plateau et la main courante d’une partie jouée par l’ordinateur et
 vérifiée par rejeu. Un défi enchaîne les poses d’un seul joueur à partir de zéro point, jusqu’à la limite
@@ -81,3 +86,21 @@ de solutions. Les deux seuils sont 50 et 400. Le statut inscrit au reçu vient d
 `npm run puzzles:generate` régénère les douze défis et leur reçu dans `packages/puzzles/data/`.
 `npm run puzzles:validate` vérifie les invariants et rejoue les solutions de référence avec le moteur.
 Les tests ciblés revérifient aussi l’exhaustivité, les paliers et les empreintes du reçu.
+
+
+## Parties d’exemple
+
+Ajoute l’un des paramètres suivants à l’URL de l’application. Les exemples sont jouables en mémoire. La reprise
+de la partie sauvegardée reste disponible depuis l’accueil.
+
+| Paramètre | Écran d’ouverture |
+| --- | --- |
+| `?exemple=deux-humains` | Passe l’appareil |
+| `?exemple=position-morte` | Position morte, « Passer » ou « Échanger » |
+| `?exemple=fin` | Partie terminée par blocage |
+| `?exemple=fin-main-vide` | Partie terminée avec le bonus de 6 points |
+| `?exemple=echange` | Choix des galets à échanger |
+
+`npm run examples:generate` régénère `apps/web/data/exemples.json` depuis les graines et les coups.
+La compilation rejoue ces données et embarque les positions, leur journal et leur écran d’ouverture.
+Avec `?seed=clavier` et les joueurs proposés par défaut, l’humain commence la partie.

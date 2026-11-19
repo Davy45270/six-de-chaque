@@ -5,9 +5,10 @@ import type { GameAction, GameConfig, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
 import type { UiCommand, UiState } from './game/controller';
+import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
-import { getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting } from './storage/db';
-import { exportGame, importGame } from './storage/transfer';
+import { completeChallenge, getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting } from './storage/db';
+import { exportGame, importGame, serializeGame } from './storage/transfer';
 import { Home } from './screens/Home';
 import { Setup } from './screens/Setup';
 import { Play } from './screens/Play';
@@ -15,18 +16,24 @@ import { Handover } from './screens/Handover';
 import { End } from './screens/End';
 import { Replay } from './screens/Replay';
 import { About } from './screens/About';
+import { Challenges } from './screens/Challenges';
 
-type Screen = 'home' | 'setup' | 'play' | 'end' | 'replay' | 'about';
+type Screen = 'home' | 'setup' | 'play' | 'end' | 'replay' | 'about' | 'challenges';
 const AI_DELAY_MS = 600;
 const newSeed = (): string => new URLSearchParams(location.search).get('seed') ?? crypto.randomUUID();
 
-export function App() {
+export function App({ example }: { example?: OpenExample }) {
     // Une seule ouverture ; chaque écriture attend la base, même si l'utilisateur agit avant qu'elle soit prête.
     const dbReady = useMemo(() => openDb(), []);
     const withDb = useCallback((fn: (d: IDBDatabase) => Promise<unknown>) => { void dbReady.then(fn).catch(() => { setMessage('La sauvegarde n’est pas disponible dans ce navigateur.'); }); }, [dbReady]);
-    const [screen, setScreen] = useState<Screen>('home');
-    const [ui, setUi] = useState<UiState | null>(null);
+    const [screen, setScreen] = useState<Screen>(example?.screen ?? 'home');
+    const [ui, setUi] = useState<UiState | null>(example?.ui ?? null);
+    const exampleId = example?.ui.gameId;
+    const standardUi = ui?.gameId === exampleId ? null : ui;
     const [highContrast, setHighContrast] = useState(false);
+    const [colourBlind, setColourBlind] = useState(false);
+    const changedAppearance = useRef({ highContrast: false, colourBlind: false });
+    const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set());
     const [resume, setResume] = useState<{ id: string; note: string | null } | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [announce, setAnnounce] = useState('');
@@ -39,7 +46,14 @@ export function App() {
 
     useEffect(() => {
         void dbReady.then(async d => {
-            setHighContrast((await getSetting<boolean>(d, 'highContrast')) ?? false);
+            const [contrast, letters, progress] = await Promise.all([
+                getSetting<boolean>(d, 'highContrast'),
+                getSetting<boolean>(d, 'colourBlind'),
+                getSetting<string[]>(d, 'completedChallenges')
+            ]);
+            if (!changedAppearance.current.highContrast) setHighContrast(contrast ?? false);
+            if (!changedAppearance.current.colourBlind) setColourBlind(letters ?? false);
+            setCompleted(previous => new Set([...(progress ?? []), ...previous]));
             const last = await getSetting<string>(d, 'lastGameId');
             const games = await listGames(d);
             const g = games.find(x => x.id === last && !x.finished);
@@ -71,9 +85,9 @@ export function App() {
         const next = withSession({ ...cur, cursor: cur.cursor }, session);
         setUi(next);
         setAnnounce(describeEvent(result.event, cur.config, session.state.tilesById));
-        withDb(d => saveTurn(d, cur.gameId, session, cur.config));
+        if (cur.gameId !== exampleId) withDb(d => saveTurn(d, cur.gameId, session, cur.config));
         if (session.state.phase === 'finished') setScreen('end');
-    }, [withDb]);
+    }, [withDb, exampleId]);
 
     const dispatch = useCallback((c: UiCommand) => {
         const cur = uiRef.current;
@@ -126,33 +140,51 @@ export function App() {
         withDb(d => saveAll(d, gameId, session, config));
         open(session, config, gameId);
     };
-    const toggleContrast = (on: boolean): void => { setHighContrast(on); withDb(d => setSetting(d, 'highContrast', on)); };
+    const toggleContrast = (on: boolean): void => {
+        changedAppearance.current.highContrast = true;
+        setHighContrast(on);
+        withDb(d => setSetting(d, 'highContrast', on));
+    };
+    const toggleColourBlind = (on: boolean): void => {
+        changedAppearance.current.colourBlind = true;
+        setColourBlind(on);
+        withDb(d => setSetting(d, 'colourBlind', on));
+    };
+    const markComplete = (id: string): void => {
+        setCompleted(previous => new Set([...previous, id]));
+        withDb(d => completeChallenge(d, id));
+    };
     const doExport = (): void => {
         if (!ui) return;
-        withDb(d => exportGame(d, ui.gameId).then(json => {
+        const download = (json: string) => {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
             a.download = `six-de-chaque-${ui.session.state.turnNumber}.json`;
             a.click();
             setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
-        }));
+        };
+        if (ui.gameId === exampleId) download(serializeGame(ui.session, ui.config));
+        else withDb(d => exportGame(d, ui.gameId).then(download));
     };
 
+    if (screen === 'challenges') return <Challenges completed={completed} highContrast={highContrast} colourBlind={colourBlind}
+        onComplete={markComplete} onHome={() => { setScreen('home'); }} />;
     if (screen === 'setup') return <Setup onStart={startNew} onBack={() => { setScreen('home'); }} />;
-    if (screen === 'about') return <About onBack={() => { setScreen(ui ? 'play' : 'home'); }} />;
+    if (screen === 'about') return <About onBack={() => { setScreen('home'); }} />;
     if (screen === 'end' && ui) return <End state={ui.session.state} config={ui.config} onReplay={() => { setScreen('replay'); }} onExport={doExport} onNew={() => { setScreen('setup'); }} onHome={() => { setScreen('home'); }} />;
-    if (screen === 'replay' && ui && ui.session.state.phase === 'finished') return <Replay config={ui.config} seed={ui.session.state.seed} events={ui.session.events} highContrast={highContrast} onBack={() => { setScreen('end'); }} />;
+    if (screen === 'replay' && ui && ui.session.state.phase === 'finished') return <Replay config={ui.config} seed={ui.session.state.seed} events={ui.session.events} highContrast={highContrast} colourBlind={colourBlind} onBack={() => { setScreen('end'); }} />;
     if (screen === 'play' && ui && view) {
         if (ui.handoverFor) {
             const name = ui.config.players.find(p => p.id === ui.handoverFor)?.name ?? '';
             return <Handover name={name} onReady={() => { dispatch({ t: 'handoverDone' }); }} />;
         }
-        return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} announce={announce} zoom={zoom} dispatch={dispatch} onMenu={() => { client.current?.cancel(); setScreen('home'); }} />;
+        return <Play ui={ui} view={view.pub} viewerHand={view.hand} highContrast={highContrast} colourBlind={colourBlind} announce={announce} zoom={zoom} dispatch={dispatch} onMenu={() => { client.current?.cancel(); setScreen('home'); }} />;
     }
-    return <Home canResume={Boolean(resume) || Boolean(ui && ui.session.state.phase !== 'finished')} resumeNote={resume?.note ?? null} highContrast={highContrast} message={message}
+    return <Home canResume={Boolean(resume) || Boolean(standardUi && standardUi.session.state.phase !== 'finished')} resumeNote={resume?.note ?? null} highContrast={highContrast} colourBlind={colourBlind} message={message}
         onNew={() => { setScreen('setup'); }}
+        onChallenges={() => { setScreen('challenges'); }}
         onResume={() => {
-            if (ui && ui.session.state.phase !== 'finished') { setUi(withSession(ui, ui.session)); setScreen('play'); return; }
+            if (standardUi && standardUi.session.state.phase !== 'finished') { setUi(withSession(standardUi, standardUi.session)); setScreen('play'); return; }
             if (resume) withDb(d => loadGame(d, resume.id).then(g => { open(g.session, g.config, resume.id); }).catch(() => { setMessage('Impossible de relire cette partie.'); }));
         }}
         onImport={text => {
@@ -164,5 +196,5 @@ export function App() {
                 open(g.session, g.config, r.gameId);
             });
         }}
-        onToggleContrast={toggleContrast} onAbout={() => { setScreen('about'); }} />;
+        onToggleContrast={toggleContrast} onToggleColourBlind={toggleColourBlind} onAbout={() => { setScreen('about'); }} />;
 }

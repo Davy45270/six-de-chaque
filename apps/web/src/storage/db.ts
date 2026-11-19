@@ -6,7 +6,7 @@ import { CURRENT_VERSION, migrate, migrateSave, SaveError } from './migrations';
 
 export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: typeof CURRENT_VERSION; checksum: string; updatedTurn: number }
 type StoredGame = Omit<SavedGame, 'version' | 'snapshot'> & { version: unknown; snapshot: unknown };
-export type SettingKey = 'highContrast' | 'lastGameId';
+export type SettingKey = 'highContrast' | 'colourBlind' | 'lastGameId' | 'completedChallenges';
 type StoredEvent = GameEvent & { gameId: string };
 
 export const DB_NAME = 'six-de-chaque';
@@ -103,5 +103,13 @@ export async function getSetting<T>(db: IDBDatabase, key: SettingKey): Promise<T
 export async function setSetting(db: IDBDatabase, key: SettingKey, value: unknown): Promise<void> {
     const tx = db.transaction('settings', 'readwrite');
     tx.objectStore('settings').put(value, key);
+    await done(tx);
+}
+
+export async function completeChallenge(db: IDBDatabase, id: string): Promise<void> {
+    const tx = db.transaction('settings', 'readwrite');
+    const settings = tx.objectStore('settings');
+    const completed = await req(settings.get('completedChallenges') as IDBRequest<string[] | undefined>);
+    settings.put([...new Set([...(completed ?? []), id])], 'completedChallenges');
     await done(tx);
 }

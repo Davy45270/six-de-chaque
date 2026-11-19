@@ -22,6 +22,15 @@ describe('controller', () => {
         expect(s.cursor).toEqual({ x: 1, y: 0 });
         expect(s.selected).toBeNull();
     });
+    it('the score preview includes the final six points only with an empty bag and hand', () => {
+        const tile = tileId(0, 1, 0);
+        const preview = (state: ReturnType<typeof stateFrom>) =>
+            run(ui({ state, events: [] }), { t: 'select', tileId: tile }, { t: 'placeAt', x: 1, y: 0 }).preview;
+        const last = stateFrom({ board: [[0, 0, 0, 0]], hands: [[[0, 1]], [[5, 5]]], bagCount: 0 });
+        expect(preview(last)).toMatchObject({ total: 8, finalBonus: 6 });
+        expect(preview({ ...last, bag: [tileId(1, 0, 0)] })).toMatchObject({ total: 2, finalBonus: 0 });
+        expect(preview(stateFrom({ board: [[0, 0, 0, 0]], hands: [[[0, 1], [0, 2]], [[5, 5]]], bagCount: 0 }))).toMatchObject({ total: 2, finalBonus: 0 });
+    });
     it('invalid ghost shows the engine detail and blocks validate', () => {
         const s0 = opening();
         const [a, , , d] = hand(s0);

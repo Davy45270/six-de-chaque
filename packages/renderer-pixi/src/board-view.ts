@@ -3,6 +3,7 @@
 import { Application, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Placement, PublicGameState, Tile, TileId } from '@six-de-chaque/engine';
 import { svgDataUrl, tileSvg } from './art';
+import type { TileAppearance } from './art';
 import { cellToScreen, fitBoard, panBy, screenToCell, zoomAt } from './camera';
 import type { Camera } from './camera';
 import { BOARD_BG, INK } from './palette';
@@ -15,29 +16,31 @@ export interface BoardView {
     getCamera(): Camera;
     zoomBy(factor: number): void;
     fit(): void;
-    setHighContrast(on: boolean): Promise<void>;
+    setAppearance(opts: TileAppearance): Promise<void>;
     destroy(): void;
     readonly canvas: HTMLCanvasElement;
 }
 
-async function loadTextures(highContrast: boolean): Promise<Map<string, Texture>> {
+async function loadTextures(opts: TileAppearance): Promise<Map<string, Texture>> {
     const out = new Map<string, Texture>();
     await Promise.all(Array.from({ length: 36 }, async (_, i) => {
         const color = Math.floor(i / 6), shape = i % 6;
         const img = new Image();
-        img.src = svgDataUrl(tileSvg(color, shape, { highContrast, px: 128 }));
+        img.src = svgDataUrl(tileSvg(color, shape, { ...opts, px: 128 }));
         await img.decode();
         out.set(`${color}:${shape}`, Texture.from(img));
     }));
     return out;
 }
 
-export async function createBoardView(host: HTMLElement, opts: { highContrast: boolean }): Promise<BoardView> {
+export async function createBoardView(host: HTMLElement, opts: TileAppearance): Promise<BoardView> {
     const app = new Application();
     await app.init({ background: BOARD_BG, resizeTo: host, antialias: true, autoDensity: true, resolution: Math.min(globalThis.devicePixelRatio || 1, 2), preference: 'webgl' });
     host.appendChild(app.canvas);
     app.canvas.style.touchAction = 'none';
-    let textures = await loadTextures(opts.highContrast);
+    let textures = await loadTextures(opts);
+    let appearance = opts;
+    let textureRequest = 0;
     const grid = new Graphics();
     const layer = new Container();
     const overlay = new Graphics();
@@ -139,8 +142,23 @@ export async function createBoardView(host: HTMLElement, opts: { highContrast: b
         getCamera() { return camera; },
         zoomBy(factor) { camera = zoomAt(camera, factor, app.screen.width / 2, app.screen.height / 2); fitted = true; draw(); },
         fit() { fitted = false; if (last) camera = fitBoard(last[0].board, app.screen.width, app.screen.height, CELL_PX, last[1]); draw(); },
-        async setHighContrast(on) { const next = await loadTextures(on); textures.forEach(t => { t.destroy(true); }); textures = next; draw(); },
-        destroy() { app.renderer.off('resize', onResize); app.destroy(true, { children: true }); textures.forEach(t => { t.destroy(true); }); },
+        async setAppearance(nextAppearance) {
+            const request = ++textureRequest;
+            if (appearance.highContrast === nextAppearance.highContrast && appearance.colourBlind === nextAppearance.colourBlind) return;
+            const next = await loadTextures(nextAppearance);
+            if (request !== textureRequest) { next.forEach(t => { t.destroy(true); }); return; }
+            const previous = textures;
+            textures = next;
+            appearance = nextAppearance;
+            draw();
+            previous.forEach(t => { t.destroy(true); });
+        },
+        destroy() {
+            textureRequest++;
+            app.renderer.off('resize', onResize);
+            app.destroy(true, { children: true });
+            textures.forEach(t => { t.destroy(true); });
+        },
         get canvas() { return app.canvas; }
     };
 }

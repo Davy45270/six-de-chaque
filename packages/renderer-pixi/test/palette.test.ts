@@ -19,6 +19,13 @@ describe('palette and art', () => {
         for (const id of ['lune', 'goutte', 'feuille', 'eclair', 'spirale', 'coeur']) expect(sheet).toContain(`id="${id}"`);
         expect(sheet).not.toMatch(/<(circle|polygon|rect)\b/);
     });
+    it('the SVG shows only the colour initial in colour-blind mode', () => {
+        for (const [color, initial] of ['O', 'C', 'V', 'J', 'B', 'V'].entries()) {
+            expect(tileSvg(color, 0, { colourBlind: true })).toMatch(new RegExp(`<text [^>]*>${initial}</text>`));
+            expect(tileSvg(color, 0, { colourBlind: true, highContrast: true })).toContain(`>${initial}</text>`);
+            expect(tileSvg(color, 0)).not.toContain('<text');
+        }
+    });
     it('every tile has a distinct drawing and a name with shape, colour and pattern', () => {
         const all = new Set<string>();
         for (let c = 0; c < 6; c++) for (let s = 0; s < 6; s++) { all.add(tileSvg(c, s)); all.add(tileSvg(c, s, { highContrast: true })); }

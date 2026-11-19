@@ -59,3 +59,12 @@ button.link { border: none; background: none; text-decoration: underline; }
     .play { grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "status status" "turn turn" "board panel"; align-items: start; }
     .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board { grid-area: board; height: calc(100dvh - 140px); } .play .panel { grid-area: panel; }
 }
+.challenges { max-width: 560px; }
+.challenge-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; list-style: none; }
+.challenge-list button { width: 100%; height: 100%; border-radius: 14px; padding-inline: 8px; }
+.challenge-list span { display: block; font-size: 0.875rem; }
+.turn p { margin: 0; }
+.turn h1 { margin: 0 0 4px; }
+.board:focus-visible { outline: 3px solid var(--encre); outline-offset: 2px; }
+.player-row { min-inline-size: 0; }
+.field input, .field select { min-width: 0; }

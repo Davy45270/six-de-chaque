@@ -2,7 +2,7 @@
   "name": "six-de-chaque",
   "version": "0.2.0",
   "private": true,
-  "description": "Six de chaque : jeu de tuiles couleur et forme, hors ligne, de 2 à 4 joueurs.",
+  "description": "Six de chaque : jeu de tuiles couleur et forme, hors ligne, de 2 \u00e0 4 joueurs.",
   "license": "MIT",
   "author": "David Sevin",
   "type": "module",
@@ -27,7 +27,8 @@
     "test:e2e": "playwright test",
     "test:mutation": "stryker run",
     "puzzles:generate": "node scripts/puzzles.js generate",
-    "puzzles:validate": "node scripts/puzzles.js validate"
+    "puzzles:validate": "node scripts/puzzles.js validate",
+    "examples:generate": "node --input-type=module -e \"import { runnerImport } from 'vite'; const { module } = await runnerImport('/scripts/make-examples.ts', { configFile: false }); module.writeExamples();\""
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
