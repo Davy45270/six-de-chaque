@@ -6,11 +6,14 @@ import { myTurn } from './helpers';
 test('the move numbers of the history are visible', async ({ page }) => {
     await page.goto('./?exemple=position-morte');
     await myTurn(page);
-    const items = page.getByTestId('history').locator('li');
+    const list = page.getByTestId('history');
+    const items = list.locator('li');
     await expect(items).toHaveCount(12);
+    // La liste elle-même est numérotée en décimal : une liste sans puce (« list-style: none ») efface les numéros.
+    await expect(list).toHaveCSS('list-style-type', 'decimal');
     const markers = await items.evaluateAll(els => els.map(el => {
         const m = getComputedStyle(el, '::marker');
-        return { color: m.color, type: getComputedStyle(el).listStyleType, visibility: m.visibility };
+        return { color: m.color, type: getComputedStyle(el).listStyleType, visibility: m.visibility, content: m.content };
     }));
     console.log(`puces : ${JSON.stringify(markers[0])}`);
     // Les numéros sont ceux des coups dans la partie : distincts, décroissants (le plus récent en premier), et le
@@ -23,7 +26,9 @@ test('the move numbers of the history are visible', async ({ page }) => {
     for (let i = 1; i < numbers.length; i++) expect(numbers[i]!, `numéros décroissants : ${numbers.join(', ')}`).toBeLessThan(numbers[i - 1]!);
     expect(numbers[0], 'le premier numéro vaut le nombre de coups joués').toBe(played);
     for (const m of markers) {
-        expect(m.type).not.toBe('none');
+        expect(m.type).toBe('decimal');
+        // Là où le navigateur expose le contenu de ::marker, il ne doit être ni « none » ni une chaîne vide.
+        expect(m.content, `contenu de la puce : ${m.content}`).not.toMatch(/^(none|""|'')$/);
         expect(m.visibility).not.toBe('hidden');
         const alpha = /^rgba\([^)]*,\s*([\d.]+)\)$/.exec(m.color)?.[1];
         expect(m.color, 'numéro transparent').not.toBe('transparent');
