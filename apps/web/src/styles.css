@@ -66,9 +66,10 @@ button.link { border: none; background: none; text-decoration: underline; }
 .ranking { font-size: 1.1rem; }
 .winner { font-size: 1.2rem; font-weight: 700; }
 .replay .board { height: 50dvh; }
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-height: 520px) {
     /* L'écran de jeu occupe exactement la hauteur de la fenêtre : le plateau prend ce que laissent l'en-tête et la
-       ligne du tour (plus haute pendant un défi), le panneau défile s'il ne tient pas. */
+       ligne du tour (plus haute pendant un défi), le panneau défile s'il ne tient pas. Seulement si la fenêtre est
+       assez haute pour le plancher de 320 px (en-tête et tour d'un défi : environ 165 px) ; sinon l'écran défile. */
     .play { height: 100dvh; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto auto minmax(320px, 1fr); grid-template-areas: "status status" "turn turn" "board panel"; align-items: start; }
     .play .status { grid-area: status; } .play .turn { grid-area: turn; } .play .board-wrap { grid-area: board; height: 100%; } .play .board { height: 100%; }
     .play .panel { grid-area: panel; max-height: 100%; overflow: auto; }
