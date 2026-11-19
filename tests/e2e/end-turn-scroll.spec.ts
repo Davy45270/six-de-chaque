@@ -102,18 +102,35 @@ test('the V shortcut brings the top of the game back', async ({ page }) => {
     await expect(page.getByTestId('history')).toContainText('Toi');
 });
 
-// Une fin de tour refusée (rien n'est joué) ne déplace ni la vue ni le focus ; le refus est annoncé.
+// Une fin de tour refusée (rien n'est joué) ne déplace ni la vue ni le focus ; le refus est annoncé. Relevés juste
+// après la touche, puis encore 300 ms au moins après l'annonce (un défilement ou un focus différés se verraient) ;
+// le focus est comparé par identité de nœud, avec une référence posée sur window avant la touche.
 async function expectRefused(page: Page, key: string, message: string | RegExp): Promise<void> {
-    const before = await page.evaluate(() => ({ scrollY: Math.round(window.scrollY), focus: document.activeElement?.outerHTML.slice(0, 80) ?? '' }));
+    const before = await page.evaluate(() => {
+        (window as unknown as { __focusBefore: Element | null }).__focusBefore = document.activeElement;
+        return { scrollY: Math.round(window.scrollY), focus: document.activeElement?.tagName ?? '' };
+    });
     console.log(`avant ${key} : ${JSON.stringify(before)}`);
     expect(before.scrollY, 'page non défilée avant le coup').toBeGreaterThan(0);
+    const measure = () => page.evaluate(() => ({
+        scrollY: Math.round(window.scrollY),
+        sameFocus: document.activeElement === (window as unknown as { __focusBefore: Element | null }).__focusBefore,
+        focus: document.activeElement?.tagName ?? ''
+    }));
     await page.keyboard.press(key);
-    const after = await page.evaluate(() => ({ scrollY: Math.round(window.scrollY), focus: document.activeElement?.outerHTML.slice(0, 80) ?? '' }));
+    const after = await measure();
     console.log(`après ${key} : ${JSON.stringify(after)}`);
     expect(after.scrollY, 'la vue a bougé alors que rien n’a été joué').toBe(before.scrollY);
-    expect(after.focus, 'le focus a bougé alors que rien n’a été joué').toBe(before.focus);
+    expect(after.sameFocus, `le focus a bougé alors que rien n’a été joué (${after.focus})`).toBe(true);
     await expect(page.locator('.board')).not.toBeFocused();
     await expect(page.getByTestId('announce')).toHaveText(message);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const later = await measure();
+    console.log(`300 ms après l'annonce de ${key} : ${JSON.stringify(later)}`);
+    expect(later.scrollY, 'la vue a bougé après l’annonce du refus').toBe(before.scrollY);
+    expect(later.sameFocus, `le focus a bougé après l’annonce du refus (${later.focus})`).toBe(true);
+    await expect(page.locator('.board')).not.toBeFocused();
 }
 
 test('a refused V from a scrolled page leaves the scroll and focus where they were', async ({ page }) => {
