@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { tileSvg } from '../src/art';
+import { glyphSheet, tileSvg } from '../src/art';
 
 // Le motif de couleur et l'initiale daltonienne sont les seuls signes non colorés d'une couleur : ils doivent se
 // peindre. Le SVG du galet est analysé en arbre ; l'élément et chacun de ses ancêtres doivent avoir une opacité non
@@ -81,3 +81,31 @@ for (const highContrast of [false, true]) {
         }
     });
 }
+
+// Un <path> se peint seulement s'il trace au moins un segment : « d » non vide, avec une commande de tracé autre
+// que M/m (Z seul ne trace rien), ou un M/m suivi de plus d'un point (lignes implicites).
+function drawsSegment(d: string | undefined): boolean {
+    for (const [, cmd = '', args = ''] of (d ?? '').matchAll(/([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g)) {
+        if (/[LlHhVvCcSsQqTtAa]/.test(cmd)) return true;
+        if (/[Mm]/.test(cmd) && (args.match(/-?(\d+\.?\d*|\.\d+)(e-?\d+)?/gi) ?? []).length > 2) return true;
+    }
+    return false;
+}
+
+it('the path-segment check rejects empty or move-only paths', () => {
+    for (const d of [undefined, '', '  ', 'M0 0', 'm1 1', 'M0 0Z', 'M0 0z M3 4']) expect(drawsSegment(d), JSON.stringify(d)).toBe(false);
+    for (const d of ['M0 0L1 1', 'M0 0 1 1', 'M0 0H8', 'M12 12a1.5 1.5 0 0 1 3 0']) expect(drawsSegment(d), d).toBe(true);
+});
+
+it('every path of every tile and of the glyph sheet draws at least one segment', () => {
+    const sources: Array<[string, string]> = [['planche des glyphes', glyphSheet()]];
+    for (const highContrast of [false, true]) for (const colourBlind of [false, true]) for (const color of [0, 1, 2, 3, 4, 5]) for (const shape of [0, 1, 2, 3, 4, 5]) {
+        sources.push([`couleur ${color}, forme ${shape}, ${highContrast ? 'contraste élevé' : 'normal'}${colourBlind ? ', daltonien' : ''}`, tileSvg(color, shape, { highContrast, colourBlind })]);
+    }
+    for (const [what, svg] of sources) {
+        const paths = all(parse(svg)).filter(n => n.tag === 'path');
+        // Le glyphe du galet est au moins un tracé ; la planche en porte six.
+        expect(paths.length, `${what} : aucun tracé`).toBeGreaterThanOrEqual(what.startsWith('planche') ? 6 : 1);
+        for (const n of paths) expect(drawsSegment(n.attrs.d), `${what} : d="${n.attrs.d ?? ''}"`).toBe(true);
+    }
+});
