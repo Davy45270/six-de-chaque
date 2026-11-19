@@ -2,7 +2,7 @@
 // `settings`. Un tour validé = une transaction (instantané + nouvel événement).
 import { replay, stateHash } from '@six-de-chaque/engine';
 import type { GameConfig, GameEvent, GameState, Session } from '@six-de-chaque/engine';
-import { checkedConfig, CURRENT_VERSION, migrate, migrateSave, SaveError, selectEventFields } from './migrations';
+import { checkedConfig, CURRENT_VERSION, migrate, migrateSave, projectSnapshot, SaveError, selectEventFields } from './migrations';
 
 export interface SavedGame { id: string; config: GameConfig; snapshot: GameState; version: typeof CURRENT_VERSION; checksum: string; updatedTurn: number }
 type StoredGame = Omit<SavedGame, 'version' | 'snapshot'> & { version: unknown; snapshot: unknown };
@@ -30,8 +30,13 @@ export function openDb(name = DB_NAME): Promise<IDBDatabase> {
     });
 }
 
-const record = (gameId: string, session: Session, config: GameConfig): SavedGame =>
-    ({ id: gameId, config: checkedConfig(config, CURRENT_VERSION), snapshot: session.state, version: CURRENT_VERSION, checksum: stateHash(session.state), updatedTurn: session.state.turnNumber });
+function record(gameId: string, session: Session, config: GameConfig): SavedGame {
+    const snapshot = projectSnapshot(session.state);
+    return {
+        id: gameId, config: checkedConfig(config, CURRENT_VERSION), snapshot, version: CURRENT_VERSION,
+        checksum: stateHash(snapshot), updatedTurn: snapshot.turnNumber
+    };
+}
 
 export class StaleGameError extends Error {
     constructor() {
@@ -41,7 +46,7 @@ export class StaleGameError extends Error {
 }
 
 export async function saveTurn(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, savedState: GameState): Promise<void> {
-    const previousChecksum = stateHash(savedState);
+    const previousChecksum = stateHash(projectSnapshot(savedState));
     const next = record(gameId, session, config);
     const finished = session.state.phase === 'finished';
     const tx = db.transaction(['games', 'events', 'settings'], 'readwrite');
@@ -86,9 +91,10 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
 
 /** Écrit une partie complète (nouvelle partie, import). */
 export async function saveAll(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, { resumeOnReload = false } = {}): Promise<void> {
+    const next = record(gameId, session, config);
     const resumable = resumeOnReload && session.state.phase !== 'finished';
     const tx = db.transaction(resumable ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
-    tx.objectStore('games').put(record(gameId, session, config));
+    tx.objectStore('games').put(next);
     const events = tx.objectStore('events');
     for (const e of session.events) events.put({ ...e, gameId } satisfies StoredEvent);
     if (resumable) tx.objectStore('settings').put(gameId, 'lastGameId');

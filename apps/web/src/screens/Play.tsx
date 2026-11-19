@@ -50,8 +50,8 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
     useEffect(() => {
         const onKey = (e: KeyboardEvent): void => {
             if (saving || e.ctrlKey || e.metaKey || e.altKey) return;
-            const target = e.target as HTMLElement | null;
-            if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
+            const target = e.target instanceof Element ? e.target : null;
+            if (target?.closest('.history-scroll') || (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) return;
             if (e.key === 'Enter' && target?.tagName === 'BUTTON') return;
             const c = keyToCommand(e.key, ui);
             if (!c) return;
@@ -66,7 +66,7 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
         return () => { window.removeEventListener('keydown', onKey); };
     }, [ui, dispatch, endTurn, refusal, saving]);
     const left = new Set(myTurn ? handLeft(ui) : viewerHand ?? []);
-    const history: GameEvent[] = ui.session.events.slice(-12).reverse();
+    const history: GameEvent[] = ui.session.events.slice().reverse();
     const shown = (viewerHand ?? []).map(id => tiles[id]).filter((t): t is Tile => t !== undefined);
     return (
         <main className="screen play" ref={screenRef}>
@@ -134,11 +134,14 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                         <button type="button" disabled={saving} onClick={() => { dispatch({ t: 'toggleExchange' }); }}>Retour à la pose</button>
                     </>}
                 </div>
-                {!challenge && <><h2 className="history-title">Derniers coups</h2>
-                {/* Le plus récent en premier, chaque coup avec son numéro dans la partie (seq part de 0). */}
-                <ol className="history" data-testid="history" reversed>
-                    {history.map(e => <li key={e.seq} value={e.seq + 1}>{describeEvent(e, ui.config, tiles)}</li>)}
-                </ol></>}
+                {!challenge && <>
+                    <h2 className="history-title">Derniers coups</h2>
+                    <div className="history-scroll" role="region" aria-label="Historique des coups" tabIndex={0}>
+                        <ol className="history" data-testid="history" reversed>
+                            {history.map(e => <li key={e.seq} value={e.seq + 1}>{describeEvent(e, ui.config, tiles)}</li>)}
+                        </ol>
+                    </div>
+                </>}
             </section>
             <p className="sr-only" aria-live="polite" data-testid="announce">{refused?.ui === ui ? refused.text : announce}</p>
         </main>

@@ -4,6 +4,8 @@ import { gameV2Schema, validateGameAction, validateGameSnapshot } from '@six-de-
 import { stateHash, submit } from '@six-de-chaque/engine';
 import type { GameConfig, Session } from '@six-de-chaque/engine';
 import { openDb, saveAll } from '../src/storage/db';
+import { saveTurn } from '../src/storage/db';
+import { SaveError } from '../src/storage/migrations';
 import { exportGame, importGame, parseExport, SAVE_FORMAT, serializeGame } from '../src/storage/transfer';
 import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
 
@@ -119,6 +121,76 @@ it('an export re-imports to the same snapshot and journal', async () => {
             const again = await exportGame(db, gameId);
             expect(JSON.parse(again), name).toEqual(JSON.parse(json));
         }
+    } finally {
+        db.close();
+    }
+});
+
+function withExtraSnapshotFields(session: Session): Session {
+    return {
+        ...session,
+        state: {
+            ...session.state,
+            players: session.state.players.map(player => ({ ...player, extra: 'hors contrat' })),
+            config: { ...session.state.config, ...{ extra: 'hors contrat' } },
+            tilesById: Object.fromEntries(Object.entries(session.state.tilesById).map(([id, tile]) => [id, { ...tile, extra: 'hors contrat' }])),
+            ...{ extra: 'hors contrat' }
+        }
+    };
+}
+
+it('serializeGame drops a field outside the contract from the snapshot and its players', () => {
+    const { session, config } = withExchange();
+    const file = JSON.parse(serializeGame(withExtraSnapshotFields(session), config)) as { snapshot: unknown; checksum: string };
+    expect(file.snapshot).toEqual(session.state);
+    expect(file.checksum).toBe(stateHash(session.state));
+});
+
+it('the saved snapshot in IndexedDB carries only schema fields', async () => {
+    const { session, config } = withExchange();
+    const db = await openDb('instantane-projete');
+    try {
+        async function expectSnapshot(saved: Session) {
+            const request = db.transaction('games').objectStore('games').get('partie') as IDBRequest<{ snapshot: unknown; checksum: string }>;
+            const row = await new Promise<typeof request.result>((resolve, reject) => {
+                request.onsuccess = () => { resolve(request.result); };
+                request.onerror = () => { reject(request.error ?? new Error('Lecture IndexedDB impossible.')); };
+            });
+            expect.soft(row.snapshot).toEqual(saved.state);
+            expect.soft(row.checksum).toBe(stateHash(saved.state));
+        }
+
+        const withExtras = withExtraSnapshotFields(session);
+        await saveAll(db, 'partie', withExtras, config);
+        await expectSnapshot(session);
+        const next = submit(session, nextAction(session)).session;
+        await saveTurn(db, 'partie', withExtraSnapshotFields(next), config, withExtras.state);
+        await expectSnapshot(next);
+    } finally {
+        db.close();
+    }
+});
+
+it('an imported board key -0:0 is refused with a message or normalised', () => {
+    const { session, config } = withExchange();
+    const file = JSON.parse(serializeGame(session, config)) as { snapshot: Session['state']; checksum: string };
+    file.snapshot.board['-0:0'] = file.snapshot.board['0:0']!;
+    delete file.snapshot.board['0:0'];
+    file.checksum = stateHash(file.snapshot);
+
+    const parsed = parseExport(JSON.stringify(file));
+    if (parsed.ok) expect(parsed.save.snapshot.board).toEqual(session.state.board);
+    else expect(parsed.reason).toContain('-0:0');
+});
+
+it('export and IndexedDB reject an invalid projected snapshot', async () => {
+    const { session, config } = withExchange();
+    const invalid = { ...session, state: { ...session.state, turnNumber: -1 } };
+    expect.soft(() => serializeGame(invalid, config)).toThrow(SaveError);
+    const db = await openDb('instantane-invalide');
+    try {
+        await expect(saveAll(db, 'partie', invalid, config)).rejects.toThrow(SaveError);
+        await expect(saveTurn(db, 'partie', invalid, config, session.state)).rejects.toThrow(SaveError);
     } finally {
         db.close();
     }

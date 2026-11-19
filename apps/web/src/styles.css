@@ -66,7 +66,8 @@ button.link { border: none; background: none; text-decoration: underline; }
 .preview { margin: 0; min-height: 1.4em; }
 .dead { margin: 0; padding: .4em .6em; border: 2px solid var(--accent); border-radius: 8px; background: var(--papier); color: var(--encre); }
 .controls { display: flex; flex-wrap: wrap; gap: 6px; }
-/* Douze coups au plus : la liste prend sa hauteur entière, aucune ligne n'est coupée. Numéros de 4 chiffres. */
+.history-scroll { max-height: 12rem; min-height: 3rem; overflow-y: auto; overflow-x: hidden; overflow-wrap: anywhere; }
+.history-scroll:focus-visible { outline: 3px solid var(--encre); outline-offset: -3px; }
 .history { margin: 0; padding-left: 2.6rem; font-size: 0.9rem; color: var(--encre-douce); }
 .history-title { margin: 0.3rem 0 0; font-size: 0.95rem; }
 .ranking { font-size: 1.1rem; }

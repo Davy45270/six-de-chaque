@@ -1,5 +1,5 @@
 // Vérification et migration sans écriture. Les empreintes historiques sont vérifiées avant remplacement.
-import { validateGameAction, validateGameSnapshot, validateGameSnapshotV1 } from '@six-de-chaque/contracts';
+import { gameV2Schema, validateGameAction, validateGameSnapshot, validateGameSnapshotV1 } from '@six-de-chaque/contracts';
 import { applyAction, canonicalJson, checkInvariants, createGame, DEFAULT_RULES, eventHash, fnv1a64, GAME_VERSION, GENESIS_HASH, replay, stateHash } from '@six-de-chaque/engine';
 import type { GameConfig, GameEvent, GameState } from '@six-de-chaque/engine';
 
@@ -54,8 +54,14 @@ export function migrate(raw: unknown): GameState {
             }
         }
     }
+    return checkedSnapshot(candidate);
+}
+
+function checkedSnapshot(candidate: unknown): GameState {
     const checked = validateGameSnapshot(candidate);
     if (!checked.ok) throw new SaveError(`Sauvegarde invalide : ${checked.errors.slice(0, 3).join(', ')}.`);
+    const invalidKey = Object.keys(checked.value.board).find(key => key.startsWith('-0:') || key.endsWith(':-0'));
+    if (invalidKey !== undefined) throw new SaveError(`Case non canonique dans la sauvegarde : ${invalidKey}.`);
     return checked.value;
 }
 
@@ -97,6 +103,30 @@ export function checkedConfig(raw: unknown, version: 1 | typeof CURRENT_VERSION)
 
 export function selectEventFields({ seq, actionId, action, score, finalBonus, prevHash, stateHash, hash }: GameEvent): GameEvent {
     return { seq, actionId, action, score, finalBonus, prevHash, stateHash, hash };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function selectFields(value: unknown, properties: object): unknown {
+    if (!isRecord(value)) return value;
+    return Object.fromEntries(Object.entries(value).filter(([key]) => Object.hasOwn(properties, key)));
+}
+
+export function projectSnapshot(state: GameState): GameState {
+    const { properties, $defs } = gameV2Schema;
+    const snapshot = selectFields(state, properties);
+    if (!isRecord(snapshot)) return checkedSnapshot(snapshot);
+    snapshot.config = selectFields(snapshot.config, properties.config.properties);
+    if (Array.isArray(snapshot.players)) {
+        snapshot.players = snapshot.players.map(player => selectFields(player, properties.players.items.properties));
+    }
+    if (isRecord(snapshot.tilesById)) {
+        snapshot.tilesById = Object.fromEntries(Object.entries(snapshot.tilesById)
+            .map(([id, tile]) => [id, selectFields(tile, $defs.tile.properties)]));
+    }
+    return checkedSnapshot(snapshot);
 }
 
 export function migrateSave(save: SaveData): CurrentSave {

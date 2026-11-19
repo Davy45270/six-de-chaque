@@ -124,7 +124,11 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
             const other = a === prev ? b : a;
             const previousDistance = Math.hypot(prev.x - other.x, prev.y - other.y);
             const distance = Math.hypot(p.x - other.x, p.y - other.y);
-            if (previousDistance > 0) { camera = zoomAt(camera, distance / previousDistance, (p.x + other.x) / 2, (p.y + other.y) / 2); fitted = true; draw(); }
+            const factor = previousDistance > 0 ? distance / previousDistance : 1;
+            const zoomed = zoomAt(camera, factor, (prev.x + other.x) / 2, (prev.y + other.y) / 2);
+            camera = panBy(zoomed, (p.x - prev.x) / 2, (p.y - prev.y) / 2);
+            fitted = true;
+            draw();
             moved = 100;
         }
         pointers.set(e.pointerId, p);

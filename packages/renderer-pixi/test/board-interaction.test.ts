@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createBoardView } from '../src/board-view';
 import { ZOOM_MAX } from '../src/camera';
+import type { Camera } from '../src/camera';
 import { COLORS_HIGH_CONTRAST, contrastRatio } from '../src/palette';
 
 interface Stroke { color: string; width: number; alpha?: number }
@@ -134,4 +135,44 @@ it('a pinch with a single move zooms by the distance ratio', async () => {
 
 it('a pinch inwards zooms out', async () => {
     expect(await zoomAfterSinglePinch(1, 80, 40)).toBe(0.5);
+});
+
+async function cameraAfterGesture(
+    moves: Array<[id: number, x: number, y: number]>,
+    zoom = 1
+): Promise<Camera> {
+    vi.spyOn(Image.prototype, 'decode').mockResolvedValue(undefined);
+    const view = await createBoardView(document.createElement('div'), {});
+    try {
+        vi.spyOn(view.canvas, 'setPointerCapture').mockImplementation(() => {});
+        view.setCamera({ x: 0, y: 0, zoom });
+        const pointer = (type: string, pointerId: number, clientX: number, clientY: number) => {
+            view.canvas.dispatchEvent(new PointerEvent(type, { pointerId, pointerType: 'touch', clientX, clientY }));
+        };
+        pointer('pointerdown', 1, 120, 120);
+        pointer('pointerdown', 2, 160, 120);
+        for (const move of moves) pointer('pointermove', ...move);
+        return view.getCamera();
+    } finally {
+        view.destroy();
+    }
+}
+
+it("a pinch keeps the world point under the fingers' midpoint", async () => {
+    expect(await cameraAfterGesture([[2, 200, 120]])).toEqual({ x: 60, y: 60, zoom: 2 });
+});
+
+it('a two-finger drag at constant spread pans the board', async () => {
+    // Les deux contacts se déplacent de 40 px, avec deux événements successifs.
+    expect(await cameraAfterGesture([[2, 200, 120], [1, 160, 120]]))
+        .toEqual({ x: -40, y: 0, zoom: 1 });
+    // Un seul événement peut aussi préserver exactement l'écartement.
+    expect(await cameraAfterGesture([[2, 120, 160]]))
+        .toEqual({ x: 20, y: -20, zoom: 1 });
+});
+
+it('a pinch driven by the first finger zooms like one driven by the second', async () => {
+    const first = await cameraAfterGesture([[1, 80, 120]]);
+    const second = await cameraAfterGesture([[2, 200, 120]]);
+    expect(first).toEqual({ ...second, x: second.x + 20 });
 });
