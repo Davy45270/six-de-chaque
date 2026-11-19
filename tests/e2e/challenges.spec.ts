@@ -16,7 +16,7 @@ async function startFirstChallenge(page: Page): Promise<void> {
 
 test('defi-reussi', async ({ page }) => {
     await startFirstChallenge(page);
-    for (const key of ['ArrowLeft', 'ArrowUp', 'ArrowUp', '2', 'Enter', 'ArrowDown', '2', 'Enter']) await page.keyboard.press(key);
+    for (const key of ['ArrowLeft', 'ArrowUp', 'ArrowUp', '2', 'Enter', 'ArrowDown', '3', 'Enter']) await page.keyboard.press(key);
     await expect(page.getByTestId('preview')).toHaveText('Coup prévu : 4 points');
     await page.keyboard.press('v');
     await expect(page.getByRole('heading', { name: 'Défi réussi' })).toBeVisible();

@@ -30,7 +30,12 @@ describe('keyboard', () => {
         expect(keyToCommand('1', ex)).toEqual({ t: 'toggleExchangeTile', tileId: hand[0] });
         expect(keyToCommand('Enter', ex)).toEqual({ t: 'confirmExchange' });
     });
-    it('digits skip tiles already placed as ghosts', () => {
-        expect(keyToCommand('1', { ...s, ghost: [{ tileId: hand[0] ?? '', x: 0, y: 0 }] })).toEqual({ t: 'select', tileId: hand[1] });
+    it('digit N names the tile announced as N, even after a ghost placement', () => {
+        // Les boutons gardent leur numéro (« 2 : … ») quand une tuile est posée en fantôme : la touche 2 désigne
+        // toujours la deuxième tuile de la main complète, et la touche d'une tuile déjà posée ne fait rien.
+        const placed = { ...s, ghost: [{ tileId: hand[0] ?? '', x: 0, y: 0 }] };
+        expect(keyToCommand('2', placed)).toEqual({ t: 'select', tileId: hand[1] });
+        expect(keyToCommand('1', placed)).toBeNull();
+        expect(keyToCommand('1', { ...placed, mode: 'exchange' as const })).toEqual({ t: 'toggleExchangeTile', tileId: hand[0] });
     });
 });
