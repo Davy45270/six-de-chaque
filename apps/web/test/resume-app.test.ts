@@ -9,7 +9,7 @@ import { createGame } from '@six-de-chaque/engine';
 import { App } from '../src/App';
 import * as storage from '../src/storage/db';
 import type { BoardProps } from '../src/components';
-import { exportGame } from '../src/storage/transfer';
+import { exportGame, parseExport } from '../src/storage/transfer';
 import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
 
 const { getSetting, listGames, loadGame, openDb, saveAll, setSetting } = storage;
@@ -359,7 +359,7 @@ it.each([
     }
 });
 
-it('after a game ends and the app reloads, no resumption is offered', async () => {
+function gameAtLastTurn(): { config: GameConfig; beforeEnd: Session; finished: Session } {
     const config: GameConfig = { players: [
         { id: 'alice', name: 'Alice', type: 'human' },
         { id: 'bob', name: 'Bob', type: 'human' }
@@ -369,7 +369,11 @@ it('after a game ends and the app reloads, no resumption is offered', async () =
         if (session.state.phase !== 'finished') beforeEnd = session;
     } });
     if (!beforeEnd || finished.state.phase !== 'finished') throw new Error('Partie à un coup de la fin attendue');
-    const finalAction = nextAction(beforeEnd);
+    return { config, beforeEnd, finished };
+}
+
+it('after a game ends and the app reloads, no resumption is offered', async () => {
+    const { config, beforeEnd, finished } = gameAtLastTurn();
     const db = await openDb();
     try {
         await saveAll(db, gameId, beforeEnd, config);
@@ -387,18 +391,7 @@ it('after a game ends and the app reloads, no resumption is offered', async () =
             await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
             await load.mock.results[1]?.value;
         });
-        const player = beforeEnd.state.players[beforeEnd.state.currentPlayerIndex];
-        clickButton(`C’est moi, ${player?.name}`);
-        if (finalAction.type === 'PASS') clickButton('Passer');
-        else if (finalAction.type === 'PLACE') {
-            for (const { tileId, x, y } of finalAction.placements) {
-                const tile = host.querySelector<HTMLButtonElement>(`button[data-tile="${tileId}"]`);
-                if (!tile || !board.onTap) throw new Error('Galet et plateau attendus');
-                act(() => { tile.click(); });
-                act(() => { board.onTap?.(x, y); });
-            }
-            clickButton('Valider');
-        }
+        playNextTurn(beforeEnd);
         await act(async () => {
             await vi.waitFor(async () => {
                 expect(await getSetting(db, 'lastGameId')).toBeUndefined();
@@ -416,6 +409,41 @@ it('after a game ends and the app reloads, no resumption is offered', async () =
         });
         expect(host.querySelector('main.home')).not.toBeNull();
         expect(host.textContent).not.toContain('Reprendre la partie');
+    } finally {
+        db.close();
+    }
+});
+
+it('after a failed save the export contains the finished game shown', async () => {
+    const { config, beforeEnd, finished } = gameAtLastTurn();
+    const db = await openDb();
+    try {
+        await saveAll(db, gameId, beforeEnd, config);
+        await setSetting(db, 'lastGameId', gameId);
+        await resumeSavedGame();
+
+        const save = vi.spyOn(storage, 'saveTurn').mockRejectedValueOnce(new Error('Écriture impossible'));
+        playNextTurn(beforeEnd);
+        await act(async () => {
+            await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+            await Promise.allSettled([save.mock.results[0]?.value]);
+        });
+        expect(host.querySelector('h1')?.textContent).toBe('Partie terminée');
+        expect(host.querySelector('[role="alert"]')?.textContent).toBe('Le dernier tour n’a pas pu être sauvegardé.');
+        expect((await loadGame(db, gameId)).session).toEqual(beforeEnd);
+
+        const objectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:partie');
+        const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+        clickButton('Exporter la partie');
+        await vi.waitFor(() => expect(download).toHaveBeenCalledOnce());
+        const blob = objectUrl.mock.calls[0]?.[0];
+        if (!(blob instanceof Blob)) throw new Error('Fichier exporté attendu');
+        const parsed = parseExport(await blob.text());
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) throw new Error(parsed.reason);
+        expect(parsed.save.snapshot.phase).toBe('finished');
+        expect(parsed.save.snapshot).toEqual(finished.state);
+        expect(parsed.save.events).toEqual(save.mock.calls[0]?.[2].events);
     } finally {
         db.close();
     }

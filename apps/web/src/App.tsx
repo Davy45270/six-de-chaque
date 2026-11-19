@@ -11,7 +11,7 @@ import type { UiCommand, UiState } from './game/controller';
 import type { OpenExample } from './game/examples';
 import { describeEvent } from './game/describe';
 import { completeChallenge, getSetting, listGames, loadGame, openDb, saveAll, saveTurn, setSetting, StaleGameError } from './storage/db';
-import { exportGame, importGame, serializeGame } from './storage/transfer';
+import { importGame, serializeGame } from './storage/transfer';
 import { addCompleted, readAppearance, readCompleted, writeAppearance } from './storage/fallback';
 import type { AppearanceKey } from './storage/fallback';
 import { Home } from './screens/Home';
@@ -224,15 +224,12 @@ export function App({ example }: { example?: OpenExample }) {
     };
     const doExport = (): void => {
         if (!ui) return;
-        const download = (json: string) => {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-            a.download = `six-de-chaque-${ui.session.state.turnNumber}.json`;
-            a.click();
-            setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
-        };
-        if (ui.gameId === exampleId) download(serializeGame(ui.session, ui.config));
-        else withDb(d => exportGame(d, ui.gameId).then(download));
+        const json = serializeGame(ui.session, ui.config);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        a.download = `six-de-chaque-${ui.session.state.turnNumber}.json`;
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
     };
 
     const saveMessage = saveFailed ? 'Le dernier tour n’a pas pu être sauvegardé.' : null;
