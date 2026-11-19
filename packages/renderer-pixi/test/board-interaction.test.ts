@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from 'vitest';
 import { createBoardView } from '../src/board-view';
+import { ZOOM_MAX } from '../src/camera';
 import { COLORS_HIGH_CONTRAST, contrastRatio } from '../src/palette';
 
 interface Stroke { color: string; width: number; alpha?: number }
@@ -103,4 +104,34 @@ it('a two-finger contact never taps a cell', async () => {
     } finally {
         view.destroy();
     }
+});
+
+async function zoomAfterSinglePinch(initialZoom: number, startDistance: number, endDistance: number): Promise<number> {
+    vi.spyOn(Image.prototype, 'decode').mockResolvedValue(undefined);
+    const view = await createBoardView(document.createElement('div'), {});
+    try {
+        vi.spyOn(view.canvas, 'setPointerCapture').mockImplementation(() => {});
+        view.setCamera({ x: 0, y: 0, zoom: initialZoom });
+        const pointer = (type: string, pointerId: number, clientX: number) => {
+            view.canvas.dispatchEvent(new PointerEvent(type, { pointerId, pointerType: 'touch', clientX, clientY: 120 }));
+        };
+
+        pointer('pointerdown', 1, 120);
+        pointer('pointerdown', 2, 120 + startDistance);
+        pointer('pointermove', 2, 120 + endDistance);
+        pointer('pointerup', 2, 120 + endDistance);
+        pointer('pointerup', 1, 120);
+        return view.getCamera().zoom;
+    } finally {
+        view.destroy();
+    }
+}
+
+it('a pinch with a single move zooms by the distance ratio', async () => {
+    expect.soft(await zoomAfterSinglePinch(1, 40, 80)).toBe(2);
+    expect(await zoomAfterSinglePinch(1.5, 40, 80)).toBe(ZOOM_MAX);
+});
+
+it('a pinch inwards zooms out', async () => {
+    expect(await zoomAfterSinglePinch(1, 80, 40)).toBe(0.5);
 });

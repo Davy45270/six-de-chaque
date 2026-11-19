@@ -103,7 +103,6 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     const pointers = new Map<number, { x: number; y: number }>();
     let moved = 0;
     let multiTouch = false;
-    let pinch = 0;
     const local = (e: MouseEvent): { x: number; y: number } => { const r = app.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const canvas = app.canvas;
     canvas.addEventListener('pointerdown', e => {
@@ -112,7 +111,6 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
         pointers.set(e.pointerId, local(e));
         if (pointers.size > 1) multiTouch = true;
         moved = 0;
-        if (pointers.size === 2) pinch = 0;
     });
     canvas.addEventListener('pointermove', e => {
         const prev = pointers.get(e.pointerId);
@@ -124,9 +122,9 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
         } else if (pointers.size === 2) {
             const [a, b] = [...pointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
             const other = a === prev ? b : a;
-            const d = Math.hypot(p.x - other.x, p.y - other.y);
-            if (pinch > 0) { camera = zoomAt(camera, d / pinch, (p.x + other.x) / 2, (p.y + other.y) / 2); fitted = true; draw(); }
-            pinch = d;
+            const previousDistance = Math.hypot(prev.x - other.x, prev.y - other.y);
+            const distance = Math.hypot(p.x - other.x, p.y - other.y);
+            if (previousDistance > 0) { camera = zoomAt(camera, distance / previousDistance, (p.x + other.x) / 2, (p.y + other.y) / 2); fitted = true; draw(); }
             moved = 100;
         }
         pointers.set(e.pointerId, p);
