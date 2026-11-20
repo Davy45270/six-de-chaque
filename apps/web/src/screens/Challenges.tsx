@@ -4,7 +4,7 @@ import { validatePuzzle } from '@six-de-chaque/contracts';
 import type { Puzzle } from '@six-de-chaque/puzzles';
 import campaign from '../../../../packages/puzzles/data/defis.json';
 import receipt from '../../../../packages/puzzles/data/defis.recu.json';
-import { Board } from '../components';
+import { Board, ZoomControls } from '../components';
 import { reduceChallenge, referenceSteps, startChallenge } from '../game/challenge';
 import type { ChallengeRun } from '../game/challenge';
 import type { UiCommand } from '../game/controller';
@@ -87,13 +87,18 @@ export function Challenges({ completed, highContrast, colourBlind, onComplete, o
 function Solution({ puzzle, highContrast, colourBlind, onBack }: Appearance & { puzzle: Puzzle; onBack(): void }) {
     const steps = useMemo(() => referenceSteps(puzzle), [puzzle]);
     const [step, setStep] = useState(0);
+    const [zoom, setZoom] = useState({ n: 0, factor: 1 });
     const state = steps[step];
     if (!state) return null;
     return <main className="screen replay">
         <h1>Solution du défi</h1>
         <p aria-live="polite">Tour {step} / {steps.length - 1} · Score : {state.players[0]?.score ?? 0}</p>
-        <Board board={state.board} ghost={[]} cursor={null} tiles={state.tilesById}
-            highContrast={highContrast} colourBlind={colourBlind} label={`Plateau de la solution après ${step} pose(s)`} />
+        <div className="board-wrap">
+            <Board board={state.board} ghost={[]} cursor={null} tiles={state.tilesById}
+                highContrast={highContrast} colourBlind={colourBlind} zoom={zoom} keyboardCamera
+                label={`Plateau de la solution après ${step} pose(s)`} />
+            <ZoomControls onZoom={factor => { setZoom(z => ({ n: z.n + 1, factor })); }} />
+        </div>
         <div className="menu row">
             <button type="button" disabled={step === 0} onClick={() => { setStep(step - 1); }}>Précédent</button>
             <button type="button" disabled={step === steps.length - 1} onClick={() => { setStep(step + 1); }}>Suivant</button>

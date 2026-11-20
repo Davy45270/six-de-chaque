@@ -1,9 +1,8 @@
 import { decideNow } from '@six-de-chaque/ai';
 import { createGame, GAME_VERSION, projectPublicState, replay, submit, validateAction } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, GameEvent, Session } from '@six-de-chaque/engine';
-import type { Puzzle, PuzzlePosition, PuzzleSolution } from '@six-de-chaque/contracts';
-import { solutionHash, solve } from './solve';
-import type { SolveResult } from './solve';
+import type { Puzzle, PuzzlePosition } from '@six-de-chaque/contracts';
+import { findBestScore, solutionHash, solve } from './solve';
 
 /** Au-delà de huit séquences gagnantes, le défi offre trop de réponses. */
 export const MAX_SOLUTIONS = 8;
@@ -42,16 +41,11 @@ export function playSource(seed: string, turns: number): { config: GameConfig; e
     return { config, events: session.events };
 }
 
-function certify(position: PuzzlePosition, result: SolveResult, solutions: PuzzleSolution[], maxSolutions: number): Puzzle | null {
-    const best = solutions[0];
-    if (result.status !== 'solved' || !result.exhaustive || !best || solutions.length > maxSolutions) return null;
+export function certifyCandidate(position: PuzzlePosition, budgetNodes: number, maxSolutions = MAX_SOLUTIONS): Puzzle | null {
+    const { status, exhaustive, solutions, best } = solve(position, budgetNodes);
+    if (status !== 'solved' || !exhaustive || !best || solutions.length > maxSolutions) return null;
     if (solutions.some(s => s.turns.length === 1 && s.turns[0]?.length === 1)) return null;
     return { ...position, solutions, solutionHash: solutionHash(best), uniqueness: solutions.length === 1 ? 'unique' : 'multiple' };
-}
-
-export function certifyCandidate(position: PuzzlePosition, budgetNodes: number, maxSolutions = MAX_SOLUTIONS): Puzzle | null {
-    const result = solve(position, budgetNodes);
-    return certify(position, result, result.solutions, maxSolutions);
 }
 
 export function generate(seed: string, options: GenerateOptions = {}): Puzzle | null {
@@ -66,11 +60,9 @@ export function generate(seed: string, options: GenerateOptions = {}): Puzzle | 
             board: state.board, hand, turnLimit, targetScore: 1, ruleVersion: GAME_VERSION, seed,
             ...(drawPolicy === 'ordered' ? { drawPolicy, drawOrder: state.bag } : { drawPolicy })
         };
-        // Chercher d'abord tous les scores positifs, puis retenir le meilleur score comme objectif.
-        const result = solve(position, budgetNodes);
-        if (!result.best) continue;
-        const targetScore = result.best.score;
-        const puzzle = certify({ ...position, targetScore }, result, result.solutions.filter(s => s.score === targetScore), maxSolutions);
+        const targetScore = findBestScore(position, budgetNodes);
+        if (!targetScore) continue;
+        const puzzle = certifyCandidate({ ...position, targetScore }, budgetNodes, maxSolutions);
         if (puzzle) return puzzle;
     }
     return null;

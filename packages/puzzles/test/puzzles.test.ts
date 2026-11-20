@@ -53,6 +53,26 @@ it('solver finds the reference solution and replays it with the real engine to r
     expect(() => validateReferenceSolutions({ ...fixture, board: { ...fixture.board, '9:9': 't-090' } })).toThrow();
 });
 
+it('solver stops every winning sequence on the first turn that reaches the target', () => {
+    const earlyWin: PuzzlePosition = {
+        ...position, board: { '0:0': 't-000' }, hand: ['t-003', 't-006', 't-009'], targetScore: 3
+    };
+    const result = solve(earlyWin, 10_000);
+    expect(result.status).toBe('solved');
+    expect(result.solutions.length).toBeGreaterThan(0);
+    for (const solution of result.solutions) {
+        let state = initialPuzzleState(earlyWin);
+        for (const placements of solution.turns) {
+            expect(state.players[0]?.score).toBeLessThan(earlyWin.targetScore);
+            const next = playPuzzleTurn(state, placements);
+            if (!next) throw new Error('pose attendue');
+            state = next;
+        }
+        expect(state.players[0]?.score).toBe(solution.score);
+        expect(solution.score).toBeGreaterThanOrEqual(earlyWin.targetScore);
+    }
+});
+
 it('exhausted budget gives unknown, never unsolvable', () => {
     const full = solve(position, 1_000);
     expect(full.nodes).toBeGreaterThan(2);
