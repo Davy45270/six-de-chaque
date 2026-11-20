@@ -59,3 +59,21 @@ it('from a fit below the minimum zoom the user can zoom in step by step up to a 
     }
     expect(camera.zoom).toBeGreaterThanOrEqual(1);
 });
+
+it('after zooming in from a fit below the minimum, zooming out returns to the fit', () => {
+    const fit = fitBoard(wideBoard, 366, 364, CELL);
+    let camera = zoomAt(fit, 1.2, 183, 182, fit.zoom);
+    expect(camera.zoom).toBeGreaterThan(fit.zoom);
+    camera = zoomAt(camera, 1 / 1.2, 183, 182, fit.zoom);
+    expect(camera.zoom).toBe(fit.zoom);
+});
+
+it('zooming out never goes below the fit of the current board', () => {
+    const fit = fitBoard(wideBoard, 366, 364, CELL);
+    let camera = fitBoard(wideBoard, 400, 400, CELL);
+    for (const factor of [1.2, 1.2, 1 / 1.2, 1.2, 1 / 1.2, 1 / 1.2, 1 / 1.2, 1 / 1.2]) {
+        camera = zoomAt(camera, factor, 183, 182, fit.zoom);
+        expect(camera.zoom).toBeGreaterThanOrEqual(fit.zoom);
+    }
+    expect(camera.zoom).toBe(fit.zoom);
+});

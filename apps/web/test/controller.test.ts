@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, tileId } from '@six-de-chaque/engine';
+import { createGame, GAME_VERSION, tileId } from '@six-de-chaque/engine';
 import type { Session } from '@six-de-chaque/engine';
 import { deadChoice, initialUi, passLegal, reduce, withSession } from '../src/game/controller';
+import { startChallenge } from '../src/game/challenge';
 import type { UiState } from '../src/game/controller';
 import { stateFrom } from '../../../packages/engine/test/fixtures';
 
@@ -101,4 +102,12 @@ describe('controller', () => {
 it('on resume the keyboard cursor starts on the board, not at the origin', () => {
     const state = stateFrom({ board: [[40, 40, 0, 0]], hands: [[[0, 1]], [[0, 2]]], turn: 1 });
     expect(ui({ state, events: [] }).cursor).toEqual({ x: 40, y: 40 });
+});
+
+it('a new challenge starts with the keyboard cursor at the origin', () => {
+    const { ui } = startChallenge({
+        seed: 'défi-curseur', ruleVersion: GAME_VERSION, turnLimit: 1, targetScore: 2,
+        board: { '1:0': tileId(0, 0, 0) }, hand: [tileId(0, 1, 0)], drawPolicy: 'none'
+    });
+    expect(ui.cursor).toEqual({ x: 0, y: 0 });
 });

@@ -1,4 +1,4 @@
-import { getSetting, loadGame } from '../storage/db';
+import { getSetting, hasFinishedSnapshot, loadGame } from '../storage/db';
 import type { LoadedGame } from '../storage/db';
 import type { UiState } from './controller';
 
@@ -27,12 +27,22 @@ export function savedResumeStatus(
     return { resume: { id, note }, message: null };
 }
 
+async function previewFinishedGame(db: IDBDatabase, id: string): Promise<LoadedGame | null> {
+    const loaded = await loadGame(db, id, 'preview').catch(() => null);
+    return loaded?.consistent && !loaded.recovered && loaded.session.state.phase === 'finished' ? loaded : null;
+}
+
 export async function loadLastFinishedGame(db: IDBDatabase): Promise<LoadedGame | null> {
+    const finishedId = await getSetting<unknown>(db, 'lastFinishedGameId').catch(() => undefined);
+    if (typeof finishedId === 'string') {
+        const finished = await previewFinishedGame(db, finishedId);
+        if (finished) return finished;
+    }
+
     try {
-        const id = await getSetting<unknown>(db, 'lastFinishedGameId');
-        if (typeof id !== 'string') return null;
-        const loaded = await loadGame(db, id, 'preview');
-        return loaded.consistent && !loaded.recovered && loaded.session.state.phase === 'finished' ? loaded : null;
+        const lastId = await getSetting<unknown>(db, 'lastGameId');
+        if (typeof lastId !== 'string' || lastId === finishedId) return null;
+        return await hasFinishedSnapshot(db, lastId) ? await previewFinishedGame(db, lastId) : null;
     } catch {
         return null;
     }

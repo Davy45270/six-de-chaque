@@ -22,7 +22,7 @@ export function challengeStatus(position: PuzzlePosition, ui: UiState): Challeng
 export function startChallenge(position: PuzzlePosition): ChallengeRun {
     const initial = initialPuzzleState(position);
     const state = { ...initial, players: initial.players.slice(0, 1).map(p => ({ ...p, name: 'Toi' })) };
-    const ui = initialUi({ state, events: [] }, SOLO, position.seed);
+    const ui = initialUi({ state, events: [] }, SOLO, position.seed, 'origin');
     return { ui, status: challengeStatus(position, ui) };
 }
 

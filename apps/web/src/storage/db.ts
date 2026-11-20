@@ -93,12 +93,13 @@ export async function saveTurn(db: IDBDatabase, gameId: string, session: Session
 /** Écrit une partie complète (nouvelle partie, import). */
 export async function saveAll(db: IDBDatabase, gameId: string, session: Session, config: GameConfig, { resumeOnReload = false } = {}): Promise<void> {
     const next = record(gameId, session, config);
-    const resumable = resumeOnReload && session.state.phase !== 'finished';
-    const tx = db.transaction(resumable ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
+    const finished = session.state.phase === 'finished';
+    const tx = db.transaction(finished || resumeOnReload ? ['games', 'events', 'settings'] : ['games', 'events'], 'readwrite');
     tx.objectStore('games').put(next);
     const events = tx.objectStore('events');
     for (const e of session.events) events.put({ ...e, gameId } satisfies StoredEvent);
-    if (resumable) tx.objectStore('settings').put(gameId, 'lastGameId');
+    if (finished) tx.objectStore('settings').put(gameId, 'lastFinishedGameId');
+    else if (resumeOnReload) tx.objectStore('settings').put(gameId, 'lastGameId');
     await done(tx);
 }
 
@@ -155,12 +156,22 @@ export async function loadGame(db: IDBDatabase, gameId: string, mode: 'inspect' 
     return recovered;
 }
 
+function isFinishedSnapshot(snapshot: unknown): boolean {
+    return !!snapshot && typeof snapshot === 'object' && 'phase' in snapshot && snapshot.phase === 'finished';
+}
+
+export async function hasFinishedSnapshot(db: IDBDatabase, gameId: string): Promise<boolean> {
+    const tx = db.transaction('games', 'readonly');
+    const saved = await req(tx.objectStore('games').get(gameId) as IDBRequest<StoredGame | undefined>);
+    return isFinishedSnapshot(saved?.snapshot);
+}
+
 export async function listGames(db: IDBDatabase): Promise<Array<Pick<SavedGame, 'id' | 'updatedTurn'> & { finished: boolean }>> {
     const tx = db.transaction('games', 'readonly');
     const all = await req(tx.objectStore('games').getAll() as IDBRequest<StoredGame[]>);
     return all.map(({ id, updatedTurn, snapshot }) => ({
         id, updatedTurn,
-        finished: !!snapshot && typeof snapshot === 'object' && 'phase' in snapshot && snapshot.phase === 'finished'
+        finished: isFinishedSnapshot(snapshot)
     }));
 }
 

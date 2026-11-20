@@ -33,8 +33,8 @@ export function withSession(s: Omit<UiState, 'session'> & { session?: Session },
     const handover = session.state.phase !== 'finished' && next?.type === 'human' && humanCount(s.config) >= 2 ? next.id : null;
     return { ...s, session, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], aiThinking: false, handoverFor: handover };
 }
-export function initialUi(session: Session, config: GameConfig, gameId: string): UiState {
-    const cells = Object.keys(session.state.board).map(parseKey);
+export function initialUi(session: Session, config: GameConfig, gameId: string, cursorStart: 'board' | 'origin' = 'board'): UiState {
+    const cells = cursorStart === 'board' ? Object.keys(session.state.board).map(parseKey) : [];
     let cursor = { x: 0, y: 0 };
     if (cells.length > 0) {
         const xs = cells.map(cell => cell.x);

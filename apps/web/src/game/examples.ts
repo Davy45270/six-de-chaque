@@ -19,7 +19,7 @@ export function replayExample(id: string, data: ExampleData): OpenExample {
         session = next.session;
     }
     if (stateHash(session.state) !== entry.checksum) throw new Error(`Empreinte de l’exemple ${id} différente du rejeu`);
-    let ui = initialUi(session, source.config, `exemple-${id}`);
+    let ui = initialUi(session, source.config, `exemple-${id}`, 'origin');
     if (entry.exchange) {
         ui = reduce(ui, { t: 'toggleExchange' }).state;
         if (ui.mode !== 'exchange') throw new Error(`Échange indisponible dans l’exemple ${id}`);

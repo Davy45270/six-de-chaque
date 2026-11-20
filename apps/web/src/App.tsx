@@ -98,9 +98,9 @@ export function App({ example }: { example?: OpenExample }) {
     }, [dbReady, screen]);
     useLayoutEffect(() => { document.documentElement.classList.toggle('hc', highContrast); }, [highContrast]);
 
-    const open = useCallback((session: Session, config: GameConfig, gameId: string) => {
+    const open = useCallback((session: Session, config: GameConfig, gameId: string, cursorStart: 'board' | 'origin') => {
         client.current?.cancel();
-        const next = initialUi(session, config, gameId);
+        const next = initialUi(session, config, gameId, cursorStart);
         setUi(next);
         setAnnounce('');
         setSaveFailure(null);
@@ -218,7 +218,7 @@ export function App({ example }: { example?: OpenExample }) {
     const startNew = (config: GameConfig): void => {
         const gameId = `partie-${crypto.randomUUID()}`;
         const session: Session = { state: createGame(config, newSeed()), events: [] };
-        open(session, config, gameId);
+        open(session, config, gameId, 'origin');
         void dbReady.then(d => saveAll(d, gameId, session, config, { resumeOnReload: true })).catch(() => {
             if (uiRef.current?.gameId === gameId) setSaveFailure('initial');
         });
@@ -288,7 +288,7 @@ export function App({ example }: { example?: OpenExample }) {
                 const g = await loadGame(d, id, 'resume').catch(() => null);
                 const status = savedResumeStatus(id, g);
                 if (g && status.resume) {
-                    open(g.session, g.config, id);
+                    open(g.session, g.config, id, 'board');
                     await setSetting(d, 'lastGameId', id);
                 } else {
                     setResume(saved => saved?.id === id ? null : saved);
@@ -302,7 +302,7 @@ export function App({ example }: { example?: OpenExample }) {
                 if (!r.ok) { setMessage(`Import refusé : ${r.reason}`); return; }
                 setMessage(null);
                 const g = await loadGame(d, r.gameId);
-                open(g.session, g.config, r.gameId);
+                open(g.session, g.config, r.gameId, 'board');
                 if (g.session.state.phase !== 'finished') await setSetting(d, 'lastGameId', r.gameId);
             });
         }}

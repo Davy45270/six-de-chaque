@@ -13,10 +13,9 @@ export function cellToScreen(cam: Camera, x: number, y: number, cellPx: number):
 export function screenToCell(cam: Camera, px: number, py: number, cellPx: number): { x: number; y: number } {
     return { x: Math.floor((px / cam.zoom + cam.x) / cellPx), y: Math.floor((py / cam.zoom + cam.y) / cellPx) };
 }
-export function zoomAt(cam: Camera, factor: number, px: number, py: number): Camera {
-    // Sous le minimum manuel, le cadrage courant sert de limite jusqu'au retour dans la plage normale.
-    const target = cam.zoom * factor;
-    const zoom = cam.zoom < ZOOM_MIN ? Math.min(ZOOM_MAX, Math.max(cam.zoom, target)) : clampZoom(target);
+export function zoomAt(cam: Camera, factor: number, px: number, py: number, fitZoom = cam.zoom): Camera {
+    const minimum = Math.min(ZOOM_MIN, fitZoom);
+    const zoom = Math.min(ZOOM_MAX, Math.max(minimum, cam.zoom * factor));
     if (zoom === cam.zoom) return cam;
     const wx = px / cam.zoom + cam.x, wy = py / cam.zoom + cam.y;
     return { zoom, x: wx - px / zoom, y: wy - py / zoom };

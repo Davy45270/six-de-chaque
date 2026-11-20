@@ -10,7 +10,9 @@ import { App } from '../src/App';
 import * as storage from '../src/storage/db';
 import type { BoardProps } from '../src/components';
 import { checkedConfig, CURRENT_VERSION, SaveError } from '../src/storage/migrations';
-import { exportGame, parseExport } from '../src/storage/transfer';
+import { exportGame, importGame, parseExport } from '../src/storage/transfer';
+import finishedExport from '../../../tests/fixtures/v1-online/finished.export.json';
+import finishedDump from '../../../tests/fixtures/v1-online/finished.indexeddb.json';
 import { configOf, nextAction, playGame } from '../../../packages/engine/test/play';
 
 const { getSetting, listGames, loadGame, openDb, saveAll, setSetting } = storage;
@@ -711,6 +713,57 @@ it('an unreadable last finished game offers no replay button', async () => {
         });
         expect(host.textContent).not.toContain('Revoir la dernière partie');
         expect(host.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+        db.close();
+    }
+});
+
+async function expectFinishedReplay(turns: number): Promise<void> {
+    mount();
+    await vi.waitFor(async () => {
+        await act(async () => {});
+        expect(host.textContent).toContain('Revoir la dernière partie');
+    });
+    expect(host.textContent).not.toContain('Reprendre la partie');
+    clickButton('Revoir la dernière partie');
+    expect(host.querySelector('h1')?.textContent).toBe('Rejeu');
+    expect(host.querySelector('[data-testid="replay-step"]')?.textContent).toContain(`Coup ${turns} sur ${turns}`);
+}
+
+it('an imported finished game can be replayed from home after a reload', async () => {
+    const db = await openDb();
+    try {
+        const imported = await importGame(db, JSON.stringify(finishedExport), () => gameId);
+        expect(imported).toEqual({ ok: true, gameId });
+        expect(await getSetting(db, 'lastGameId')).toBeUndefined();
+        const { session } = await loadGame(db, gameId, 'preview');
+        await expectFinishedReplay(session.events.length);
+        expect(await getSetting(db, 'lastFinishedGameId')).toBe(gameId);
+    } finally {
+        db.close();
+    }
+});
+
+it('a finished v1 save pointed by lastGameId can be replayed from home', async () => {
+    const { stores } = finishedDump;
+    const db = await openDb();
+    try {
+        const tx = db.transaction(['games', 'events', 'settings'], 'readwrite');
+        for (const game of stores.games) tx.objectStore('games').put(game);
+        for (const event of stores.events) tx.objectStore('events').put(event);
+        for (const { key, value } of stores.settings) tx.objectStore('settings').put(value, key);
+        await new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => { resolve(); };
+            tx.onabort = () => { reject(tx.error ?? new Error('Transaction annulée')); };
+        });
+        expect(await getSetting(db, 'lastGameId')).toBeTypeOf('string');
+        expect(await getSetting(db, 'lastFinishedGameId')).toBeUndefined();
+        await expectFinishedReplay(stores.events.length);
+
+        await setSetting(db, 'lastFinishedGameId', 'partie-introuvable');
+        act(() => { root.unmount(); });
+        root = createRoot(host);
+        await expectFinishedReplay(stores.events.length);
     } finally {
         db.close();
     }

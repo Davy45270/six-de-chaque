@@ -50,6 +50,11 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     let tap: ((x: number, y: number) => void) | null = null;
     let fitted = false;
 
+    const currentFit = (): Camera =>
+        fitBoard(last?.[0].board ?? {}, app.screen.width, app.screen.height, CELL_PX, last?.[1]);
+    const zoomCameraAt = (factor: number, x: number, y: number): Camera =>
+        zoomAt(camera, factor, x, y, currentFit().zoom);
+
     const draw = (): void => {
         if (!last) return;
         const [view, ghost, cursor, tiles] = last;
@@ -96,7 +101,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
             overlay.roundRect(px + 1, py + 1, s - 2, s - 2, s * 0.3).stroke({ width: Math.max(3, s * 0.08), color: ink });
         }
     };
-    const onResize = (): void => { if (!fitted && last) camera = fitBoard(last[0].board, app.screen.width, app.screen.height, CELL_PX, last[1]); draw(); };
+    const onResize = (): void => { if (!fitted && last) camera = currentFit(); draw(); };
     app.renderer.on('resize', onResize);
 
     // Gestes : un pointeur glisse, deux pointeurs pincent ; un toucher sans déplacement choisit une case.
@@ -125,7 +130,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
             const previousDistance = Math.hypot(prev.x - other.x, prev.y - other.y);
             const distance = Math.hypot(p.x - other.x, p.y - other.y);
             const factor = previousDistance > 0 ? distance / previousDistance : 1;
-            const zoomed = zoomAt(camera, factor, (prev.x + other.x) / 2, (prev.y + other.y) / 2);
+            const zoomed = zoomCameraAt(factor, (prev.x + other.x) / 2, (prev.y + other.y) / 2);
             camera = panBy(zoomed, (p.x - prev.x) / 2, (p.y - prev.y) / 2);
             fitted = true;
             draw();
@@ -140,13 +145,13 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     };
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); });
-    canvas.addEventListener('wheel', e => { e.preventDefault(); const p = local(e); camera = zoomAt(camera, e.deltaY < 0 ? 1.12 : 1 / 1.12, p.x, p.y); fitted = true; draw(); }, { passive: false });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); const p = local(e); camera = zoomCameraAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, p.x, p.y); fitted = true; draw(); }, { passive: false });
 
     return {
         render(...args) {
             const first = last === null;
             last = args;
-            if (first || !fitted) camera = fitBoard(args[0].board, app.screen.width, app.screen.height, CELL_PX, args[1]);
+            if (first || !fitted) camera = currentFit();
             if (args[2] && !first) {
                 // Garder le curseur clavier visible.
                 const { px, py } = cellToScreen(camera, args[2].x, args[2].y, CELL_PX);
@@ -158,8 +163,8 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
         onCellTap(cb) { tap = cb; },
         setCamera(c) { camera = c; fitted = true; draw(); },
         getCamera() { return camera; },
-        zoomBy(factor) { camera = zoomAt(camera, factor, app.screen.width / 2, app.screen.height / 2); fitted = true; draw(); },
-        fit() { fitted = false; if (last) camera = fitBoard(last[0].board, app.screen.width, app.screen.height, CELL_PX, last[1]); draw(); },
+        zoomBy(factor) { camera = zoomCameraAt(factor, app.screen.width / 2, app.screen.height / 2); fitted = true; draw(); },
+        fit() { fitted = false; if (last) camera = currentFit(); draw(); },
         async setAppearance(nextAppearance) {
             const request = ++textureRequest;
             if (appearance.highContrast === nextAppearance.highContrast && appearance.colourBlind === nextAppearance.colourBlind) return;
