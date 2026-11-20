@@ -48,24 +48,38 @@ export async function handIds(page: Page): Promise<string[]> {
     return handTiles(page).evaluateAll(els => els.map(e => e.getAttribute('data-tile') ?? ''));
 }
 /**
- * Joue le tour humain courant par les boutons, comme un joueur : « Indice » propose une pose, « Valider » la joue.
- * Sans pose proposée : « Passer » s'il est offert, sinon « Échanger » la première tuile.
+ * Joue le tour humain courant par les boutons, comme un joueur, en suivant « Indice » :
+ * - pose conseillée (aperçu « Coup prévu ») : « Valider » la joue ;
+ * - échange conseillé : l'écran passe de lui-même en mode échange, tuiles conseillées présélectionnées
+ *   (`aria-pressed="true"` dans la main) ; « Confirmer l’échange » les échange ;
+ * - passe conseillée (aperçu « Indice : … tu peux passer. ») : « Passer ».
+ * Repli, si aucun de ces trois états n'apparaît : « Échanger » la première tuile.
  * Rend les tuiles qui ont quitté la main (posées ou échangées).
  */
 export async function playByHint(page: Page, press: (l: Locator) => Promise<void> = l => l.click()): Promise<string[]> {
     const before = await handIds(page);
+    const preview = page.getByTestId('preview');
+    const confirm = page.getByRole('button', { name: 'Confirmer l’échange' });
+    const proposed = preview.filter({ hasText: /^Coup prévu/ });
+    const passAdvised = preview.filter({ hasText: 'tu peux passer' });
     await press(page.getByRole('button', { name: 'Indice' }));
-    const proposed = await expect(page.getByTestId('preview')).toHaveText(/^Coup prévu/, { timeout: 15_000 }).then(() => true, () => false);
-    if (proposed) {
+    const answered = await expect(proposed.or(confirm).or(passAdvised)).toBeVisible({ timeout: 15_000 }).then(() => true, () => false);
+    if (answered && await proposed.isVisible()) {
         const placed = await page.getByTestId('hand').locator('button.tile.placed').evaluateAll(els => els.map(e => e.getAttribute('data-tile') ?? ''));
         expect(placed.length).toBeGreaterThan(0);
         await press(page.getByRole('button', { name: 'Valider' }));
         return placed;
     }
+    if (answered && await confirm.isVisible()) {
+        const chosen = await handTiles(page).and(page.locator('[aria-pressed="true"]')).evaluateAll(els => els.map(e => e.getAttribute('data-tile') ?? ''));
+        expect(chosen.length).toBeGreaterThan(0);
+        await press(confirm);
+        return chosen;
+    }
     const pass = page.getByRole('button', { name: 'Passer' });
-    if (await pass.count()) { await press(pass); return []; }
+    if (answered && await pass.count()) { await press(pass); return []; }
     await press(page.getByRole('button', { name: 'Échanger' }));
     await press(handTiles(page).first());
-    await press(page.getByRole('button', { name: 'Confirmer l’échange' }));
+    await press(confirm);
     return before.slice(0, 1);
 }
