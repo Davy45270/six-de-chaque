@@ -6,6 +6,7 @@ import type { GameAction, GameConfig, Placement, ScoreBreakdown, Session, TileId
 export interface UiState {
     session: Session; config: GameConfig; gameId: string;
     selected: TileId | null; ghost: Placement[]; preview: (ScoreBreakdown & { finalBonus: number }) | null; previewError: string | null;
+    hint: string | null;
     mode: 'place' | 'exchange'; exchangeSel: TileId[]; cursor: { x: number; y: number }; aiThinking: boolean; handoverFor: string | null;
 }
 export type UiCommand = { t: 'select'; tileId: TileId } | { t: 'placeAt'; x: number; y: number } | { t: 'undoGhost' } | { t: 'clearGhost' }
@@ -31,7 +32,7 @@ const actionId = (s: UiState, kind: string): string => `${s.gameId}-${s.session.
 export function withSession(s: Omit<UiState, 'session'> & { session?: Session }, session: Session): UiState {
     const next = session.state.players[session.state.currentPlayerIndex];
     const handover = session.state.phase !== 'finished' && next?.type === 'human' && humanCount(s.config) >= 2 ? next.id : null;
-    return { ...s, session, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], aiThinking: false, handoverFor: handover };
+    return { ...s, session, hint: null, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], aiThinking: false, handoverFor: handover };
 }
 export function initialUi(session: Session, config: GameConfig, gameId: string, cursorStart: 'board' | 'origin' = 'board'): UiState {
     const cells = cursorStart === 'board' ? Object.keys(session.state.board).map(parseKey) : [];
@@ -51,7 +52,7 @@ export function initialUi(session: Session, config: GameConfig, gameId: string, 
             }
         }
     }
-    return withSession({ config, gameId, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], cursor, aiThinking: false, handoverFor: null }, session);
+    return withSession({ config, gameId, hint: null, selected: null, ghost: [], preview: null, previewError: null, mode: 'place', exchangeSel: [], cursor, aiThinking: false, handoverFor: null }, session);
 }
 
 function withGhost(s: UiState, ghost: Placement[]): UiState {
@@ -66,7 +67,7 @@ function withGhost(s: UiState, ghost: Placement[]): UiState {
 }
 
 /** Pose un fantôme proposé (indice), avec son score prévisionnel. */
-export const setGhost = (s: UiState, ghost: Placement[]): UiState => ({ ...withGhost({ ...s, selected: null, mode: 'place', exchangeSel: [] }, ghost) });
+export const setGhost = (s: UiState, ghost: Placement[]): UiState => ({ ...withGhost({ ...s, hint: null, selected: null, mode: 'place', exchangeSel: [] }, ghost) });
 
 export function reduce(s: UiState, c: UiCommand): { state: UiState; submit?: GameAction } {
     const game = s.session.state;

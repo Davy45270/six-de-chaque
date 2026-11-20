@@ -111,6 +111,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     const local = (e: MouseEvent): { x: number; y: number } => { const r = app.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const canvas = app.canvas;
     canvas.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         canvas.setPointerCapture(e.pointerId);
         if (pointers.size === 0) multiTouch = false;
         pointers.set(e.pointerId, local(e));
@@ -141,6 +142,7 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     const up = (e: PointerEvent): void => {
         const p = pointers.get(e.pointerId);
         pointers.delete(e.pointerId);
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         if (p && pointers.size === 0 && !multiTouch && moved <= 8 && tap) { const c = screenToCell(camera, p.x, p.y, CELL_PX); tap(c.x, c.y); }
     };
     canvas.addEventListener('pointerup', up);

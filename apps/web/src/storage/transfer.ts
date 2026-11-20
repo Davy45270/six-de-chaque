@@ -42,6 +42,6 @@ export async function importGame(db: IDBDatabase, json: string, newId: () => str
     const parsed = parseExport(json);
     if (!parsed.ok) return parsed;
     const gameId = newId();
-    await saveAll(db, gameId, { state: parsed.save.snapshot, events: parsed.save.events }, parsed.save.config);
+    await saveAll(db, gameId, { state: parsed.save.snapshot, events: parsed.save.events }, parsed.save.config, { resumeOnReload: true });
     return { ok: true, gameId };
 }

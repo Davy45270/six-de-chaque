@@ -199,3 +199,33 @@ it('the first frame after resume keeps every tile on screen when the board exclu
         view.destroy();
     }
 });
+
+it('a secondary mouse click never taps a cell', async () => {
+    vi.spyOn(Image.prototype, 'decode').mockResolvedValue(undefined);
+    const view = await createBoardView(document.createElement('div'), {});
+    try {
+        vi.spyOn(view.canvas, 'setPointerCapture').mockImplementation(() => {});
+        const tap = vi.fn();
+        view.onCellTap(tap);
+        const pointer = (type: string, button: number) => {
+            view.canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', button, clientX: 120, clientY: 120 }));
+        };
+
+        for (const button of [1, 2]) {
+            pointer('pointerdown', button);
+            pointer('pointerup', button);
+            expect.soft(tap, `bouton ${button}`).not.toHaveBeenCalled();
+            tap.mockClear();
+        }
+        pointer('pointerdown', 0);
+        pointer('pointerup', 2);
+        expect.soft(tap).not.toHaveBeenCalled();
+        tap.mockClear();
+
+        pointer('pointerdown', 0);
+        pointer('pointerup', 0);
+        expect(tap).toHaveBeenCalledOnce();
+    } finally {
+        view.destroy();
+    }
+});

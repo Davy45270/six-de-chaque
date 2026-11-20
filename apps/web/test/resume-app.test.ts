@@ -768,3 +768,22 @@ it('a finished v1 save pointed by lastGameId can be replayed from home', async (
         db.close();
     }
 });
+
+it('an imported game in progress is resumable from home after a reload even if no later write happens', async () => {
+    const { serializeGame } = await import('../src/storage/transfer');
+    const config: GameConfig = { players: [
+        { id: 'alice', name: 'Alice', type: 'human' },
+        { id: 'bob', name: 'Bob', type: 'human' }
+    ] };
+    const session = playGame(config, 'import-en-cours', { maxTurns: 1 });
+    const db = await openDb();
+    try {
+        expect(await importGame(db, serializeGame(session, config), () => gameId)).toEqual({ ok: true, gameId });
+    } finally {
+        db.close();
+    }
+
+    await resumeSavedGame();
+    const player = session.state.players[session.state.currentPlayerIndex];
+    expect(host.querySelector('h1')?.textContent).toBe(`Passe l’appareil à ${player?.name}`);
+});

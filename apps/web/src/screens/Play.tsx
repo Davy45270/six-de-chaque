@@ -116,8 +116,8 @@ export function Play({ ui, view, viewerHand, highContrast, colourBlind, announce
                     })}
                     {shown.length === 0 && <p className="hidden-hand">Main cachée</p>}
                 </div>
-                <p className="preview" data-testid="preview">
-                    {ui.previewError ? <span className="error">{ui.previewError}</span> : ui.preview ? `Coup prévu : ${ui.preview.total} point${ui.preview.total > 1 ? 's' : ''}${ui.preview.finalBonus ? `, dont ${ui.preview.finalBonus} pour finir` : ''}` : ui.mode === 'exchange' ? exchangeLabel(ui.exchangeSel.length) : ' '}
+                <p className="preview" data-testid="preview" aria-live="polite">
+                    {ui.previewError ? <span className="error">{ui.previewError}</span> : ui.hint ?? (ui.preview ? `Coup prévu : ${ui.preview.total} point${ui.preview.total > 1 ? 's' : ''}${ui.preview.finalBonus ? `, dont ${ui.preview.finalBonus} pour finir` : ''}` : ui.mode === 'exchange' ? exchangeLabel(ui.exchangeSel.length) : ' ')}
                 </p>
                 {dead && ui.mode === 'place' && <p className="dead" role="status" data-testid="dead-position">
                     Plus aucune tuile du jeu ne peut être posée. Passe, ou échange les tuiles de ton choix (une, plusieurs ou toutes).

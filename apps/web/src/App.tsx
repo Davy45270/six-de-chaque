@@ -165,13 +165,24 @@ export function App({ example }: { example?: OpenExample }) {
                     const now = uiRef.current;
                     if (response.status !== 'ok' || !now || !current()) return;
                     const { move, explanation } = response.decision;
-                    if (move.type === 'PLACE') { setUi(setGhost(now, move.placements)); setAnnounce(`Indice : ${explanation}`); }
+                    if (move.type === 'PLACE') {
+                        setUi(setGhost(now, move.placements));
+                        setAnnounce(`Indice : ${explanation}`);
+                    } else if (move.type === 'EXCHANGE') {
+                        const exchange = reduce(now, { t: 'toggleExchange' }).state;
+                        const exchangeSel = me.hand.filter(id => move.tileIds.includes(id));
+                        if (exchange.mode === 'exchange' && exchangeSel.length > 0) {
+                            setUi({ ...exchange, exchangeSel, hint: `Indice : ${explanation}` });
+                        }
+                    } else if (move.type === 'PASS') {
+                        setUi({ ...now, hint: 'Indice : aucune pose ni échange possible, tu peux passer.' });
+                    }
                 });
             return;
         }
         if (c.t !== 'moveCursor') hintRevision.current++;
         const { state, submit: action } = reduce(cur, c);
-        setUi(state);
+        setUi(c.t !== 'moveCursor' && state !== cur && state.hint ? { ...state, hint: null } : state);
         if (action) void apply(action);
     }, [apply]);
 
@@ -303,7 +314,6 @@ export function App({ example }: { example?: OpenExample }) {
                 setMessage(null);
                 const g = await loadGame(d, r.gameId);
                 open(g.session, g.config, r.gameId, 'board');
-                if (g.session.state.phase !== 'finished') await setSetting(d, 'lastGameId', r.gameId);
             });
         }}
         onToggleContrast={toggleContrast} onToggleColourBlind={toggleColourBlind} onAbout={() => { setScreen('about'); }} />;
