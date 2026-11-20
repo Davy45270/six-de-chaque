@@ -4,7 +4,7 @@ import type { TileId } from '@six-de-chaque/engine';
 export interface Camera { x: number; y: number; zoom: number }
 export const ZOOM_MIN = 0.35;
 export const ZOOM_MAX = 2.5;
-export const FIT_MIN = 0.1;
+export const FIT_MIN = 0.02;
 export const clampZoom = (z: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 export function cellToScreen(cam: Camera, x: number, y: number, cellPx: number): { px: number; py: number } {
@@ -29,7 +29,9 @@ export function fitBoard(board: Readonly<Record<string, TileId>>, viewW: number,
     if (cells.length === 0) cells.push([0, 0]);
     const xs = cells.map(c => c[0]), ys = cells.map(c => c[1]);
     const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 3, y0 = Math.min(...ys) - 2, y1 = Math.max(...ys) + 3;
-    const zoom = Math.max(FIT_MIN, Math.min(viewW / ((x1 - x0) * cellPx), viewH / ((y1 - y0) * cellPx), 1.4));
+    const fit = Math.min(viewW / ((x1 - x0) * cellPx), viewH / ((y1 - y0) * cellPx), 1.4);
+    // Conserve le zoom d'attente tant que les deux dimensions de la vue sont quasi nulles.
+    const zoom = viewW <= 1 && viewH <= 1 ? 0.1 : Math.max(FIT_MIN, fit);
     const cx = ((x0 + x1) / 2) * cellPx, cy = ((y0 + y1) / 2) * cellPx;
     return { zoom, x: cx - viewW / (2 * zoom), y: cy - viewH / (2 * zoom) };
 }

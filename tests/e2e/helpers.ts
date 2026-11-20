@@ -52,8 +52,9 @@ export async function handIds(page: Page): Promise<string[]> {
  * - pose conseillée (aperçu « Coup prévu ») : « Valider » la joue ;
  * - échange conseillé : l'écran passe de lui-même en mode échange, tuiles conseillées présélectionnées
  *   (`aria-pressed="true"` dans la main) ; « Confirmer l’échange » les échange ;
- * - passe conseillée (aperçu « Indice : … tu peux passer. ») : « Passer ».
- * Repli, si aucun de ces trois états n'apparaît : « Échanger » la première tuile.
+ * - passe conseillée (aperçu contenant « tu peux passer ») : « Passer ».
+ * Repli, si aucun de ces trois états n'apparaît : « Passer » si le bouton est offert,
+ * sinon « Échanger » la première tuile.
  * Rend les tuiles qui ont quitté la main (posées ou échangées).
  */
 export async function playByHint(page: Page, press: (l: Locator) => Promise<void> = l => l.click()): Promise<string[]> {
@@ -76,8 +77,8 @@ export async function playByHint(page: Page, press: (l: Locator) => Promise<void
         await press(confirm);
         return chosen;
     }
-    const pass = page.getByRole('button', { name: 'Passer' });
-    if (answered && await pass.count()) { await press(pass); return []; }
+    const pass = page.getByRole('button', { name: 'Passer', exact: true });
+    if (await pass.isVisible() && await pass.isEnabled()) { await press(pass); return []; }
     await press(page.getByRole('button', { name: 'Échanger' }));
     await press(handTiles(page).first());
     await press(confirm);

@@ -229,3 +229,30 @@ it('a secondary mouse click never taps a cell', async () => {
         view.destroy();
     }
 });
+
+it('after a manual pan, a render with an unchanged cursor keeps the camera', async () => {
+    vi.spyOn(Image.prototype, 'decode').mockResolvedValue(undefined);
+    const view = await createBoardView(document.createElement('div'), {});
+    try {
+        vi.spyOn(view.canvas, 'setPointerCapture').mockImplementation(() => {});
+        const board = { board: { '0:0': 'a' } };
+        const tiles = { a: { id: 'a', color: 0, shape: 0 } };
+        view.render(board, [], { x: 0, y: 0 }, tiles);
+        const initial = view.getCamera();
+        const drag = (type: string, clientX: number) => {
+            view.canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', clientX, clientY: 120 }));
+        };
+        drag('pointerdown', 40);
+        drag('pointermove', 300);
+        drag('pointerup', 300);
+        const panned = view.getCamera();
+        expect(panned.x).toBeLessThan(initial.x);
+
+        view.render(board, [], { x: 0, y: 0 }, tiles);
+        expect(view.getCamera()).toEqual(panned);
+        view.render(board, [], { x: 1, y: 0 }, tiles);
+        expect(view.getCamera().x).toBeGreaterThan(panned.x);
+    } finally {
+        view.destroy();
+    }
+});

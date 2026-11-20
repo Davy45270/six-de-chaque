@@ -152,11 +152,13 @@ export async function createBoardView(host: HTMLElement, opts: TileAppearance): 
     return {
         render(...args) {
             const first = last === null;
+            const previousCursor = last?.[2];
+            const cursor = args[2];
             last = args;
             if (first || !fitted) camera = currentFit();
-            if (args[2] && !first) {
-                // Garder le curseur clavier visible.
-                const { px, py } = cellToScreen(camera, args[2].x, args[2].y, CELL_PX);
+            if (!first && cursor && (cursor.x !== previousCursor?.x || cursor.y !== previousCursor.y)) {
+                // Suivre le curseur lorsqu'il change de case.
+                const { px, py } = cellToScreen(camera, cursor.x, cursor.y, CELL_PX);
                 const s = CELL_PX * camera.zoom;
                 if (px < 0 || py < 0 || px + s > app.screen.width || py + s > app.screen.height) camera = panBy(camera, app.screen.width / 2 - px - s / 2, app.screen.height / 2 - py - s / 2);
             }

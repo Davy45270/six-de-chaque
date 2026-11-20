@@ -4,10 +4,14 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createAiHost } from '@six-de-chaque/ai';
 import type { FromWorker } from '@six-de-chaque/ai';
+import { validateAction } from '@six-de-chaque/engine';
 import type { GameConfig, Session } from '@six-de-chaque/engine';
 import { playGame } from '../../../packages/engine/test/play';
 import { App } from '../src/App';
 import { initialUi } from '../src/game/controller';
+import data from '../data/exemples.json';
+import { replayExample } from '../src/game/examples';
+import type { ExampleData } from '../src/game/examples';
 
 vi.mock('../src/components', async importOriginal => ({
     ...await importOriginal<typeof import('../src/components')>(),
@@ -80,4 +84,19 @@ it('a hint advising a pass announces it', async () => {
     expect(move.type).toBe('PASS');
     expect(host.querySelector('[data-testid="preview"][aria-live="polite"]')?.textContent ?? '')
         .toContain('Indice : aucune pose ni échange possible, tu peux passer.');
+});
+
+it('a pass hint in a dead position where exchange is legal says that exchanging is possible', async () => {
+    const { ui: { session } } = replayExample('position-morte', data as ExampleData);
+    const { state } = session;
+    const player = state.players[state.currentPlayerIndex]!;
+    expect(validateAction(state, {
+        type: 'EXCHANGE', actorId: player.id, expectedTurn: state.turnNumber,
+        actionId: 'sonde', tileIds: player.hand.slice(0, 1)
+    }).ok).toBe(true);
+
+    const { move } = await askForHint(session);
+    expect(move.type).toBe('PASS');
+    expect(host.querySelector('[data-testid="preview"][aria-live="polite"]')?.textContent)
+        .toContain('Indice : aucune pose possible ; tu peux passer ou échanger.');
 });

@@ -1,6 +1,6 @@
 // Application : écrans, partie en cours, ordinateur dans un Worker, sauvegarde après chaque coup accepté.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createGame, projectPublicState, stateHash, submit } from '@six-de-chaque/engine';
+import { createGame, projectPublicState, stateHash, submit, validateAction } from '@six-de-chaque/engine';
 import type { GameAction, GameConfig, GameState, Session } from '@six-de-chaque/engine';
 import { AiClient } from '@six-de-chaque/ai';
 import { currentPlayer, humanCount, initialUi, reduce, setGhost, withSession } from './game/controller';
@@ -175,7 +175,14 @@ export function App({ example }: { example?: OpenExample }) {
                             setUi({ ...exchange, exchangeSel, hint: `Indice : ${explanation}` });
                         }
                     } else if (move.type === 'PASS') {
-                        setUi({ ...now, hint: 'Indice : aucune pose ni échange possible, tu peux passer.' });
+                        const game = now.session.state;
+                        const canExchange = validateAction(game, {
+                            type: 'EXCHANGE', actorId: me.id, expectedTurn: game.turnNumber,
+                            actionId: 'sonde', tileIds: me.hand.slice(0, 1)
+                        }).ok;
+                        setUi({ ...now, hint: canExchange
+                            ? 'Indice : aucune pose possible ; tu peux passer ou échanger.'
+                            : 'Indice : aucune pose ni échange possible, tu peux passer.' });
                     }
                 });
             return;

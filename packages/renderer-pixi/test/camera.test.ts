@@ -77,3 +77,46 @@ it('zooming out never goes below the fit of the current board', () => {
     }
     expect(camera.zoom).toBe(fit.zoom);
 });
+
+function expectBoardWithMarginsToFit(
+    board: Parameters<typeof fitBoard>[0],
+    width: number,
+    height: number
+): void {
+    const camera = fitBoard(board, width, height, CELL);
+    for (const key of Object.keys(board)) {
+        const [x, y] = key.split(':').map(Number) as [number, number];
+        const topLeft = cellToScreen(camera, x - 2, y - 2, CELL);
+        const bottomRight = cellToScreen(camera, x + 3, y + 3, CELL);
+        expect(topLeft.px).toBeGreaterThanOrEqual(-1e-9);
+        expect(topLeft.py).toBeGreaterThanOrEqual(-1e-9);
+        expect(bottomRight.px).toBeLessThanOrEqual(width + 1e-9);
+        expect(bottomRight.py).toBeLessThanOrEqual(height + 1e-9);
+    }
+}
+
+it('fitBoard keeps every tile of a 36-row board inside a 220 px high view', () => {
+    expectBoardWithMarginsToFit({ '0:-17': 't-000', '0:18': 't-001' }, 362, 220);
+});
+
+it('fitBoard keeps every tile of a 58-column board inside a 362 px wide view', () => {
+    expectBoardWithMarginsToFit({ '-29:0': 't-000', '28:0': 't-001' }, 362, 220);
+});
+
+it('a 113-cell extent including margins fits in 145 px and supports a zoom round trip', () => {
+    const board = { '0:0': 't-000', '108:0': 't-001' };
+    expectBoardWithMarginsToFit(board, 145, 145);
+    const fit = fitBoard(board, 145, 145, CELL);
+    const focus = 145 / 2;
+    let camera = fit;
+    for (let step = 0; step < 30 && camera.zoom < 1; step++) {
+        camera = zoomAt(camera, 1.2, focus, focus, fit.zoom);
+    }
+    expect(camera.zoom).toBeGreaterThanOrEqual(1);
+    for (let step = 0; step < 30; step++) {
+        camera = zoomAt(camera, 1 / 1.2, focus, focus, fit.zoom);
+    }
+    expect(camera.zoom).toBe(fit.zoom);
+    expect(camera.x).toBeCloseTo(fit.x);
+    expect(camera.y).toBeCloseTo(fit.y);
+});
